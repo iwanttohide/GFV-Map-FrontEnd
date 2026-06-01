@@ -6,9 +6,10 @@ import SocialLogin from './SocialLogin';
 
 interface LoginFormProps {
     setViewMode: (mode: AuthViewMode) => void;
+    onClose: () => void;
 }
 
-export default function LoginForm({ setViewMode }: LoginFormProps) {
+export default function LoginForm({ setViewMode, onClose }: LoginFormProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -21,6 +22,7 @@ export default function LoginForm({ setViewMode }: LoginFormProps) {
         }
         console.log('로그인 시도 데이터:', { email, password });
         alert('로그인 성공! 메인화면(F-MAP-001)으로 이동합니다.');
+        onClose();
     };
 
     return (

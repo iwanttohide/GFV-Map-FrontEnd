@@ -1,19 +1,39 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
-  return (
-    <div className="main-layout h-screen flex flex-col">
-    {/*  1. 상단 고정 헤더*/}
-    <Header />
+import React, { useState } from 'react';
+import AuthModal from "@/components/auth/AuthModal";
 
-    {/*  2. 하단 콘텐츠 영역(세로로 남은 나머지 공간)*/}
-      <div className="content-area flex flex-1 overflow-hidden">
-         {/* 2-1. 좌측 사이드바(고정 넓이, 내부 스크롤)*/}
-         <Sidebar />
+export default function MainPage() {
+    // 1. 모달이 열려있는지 닫혀있는지 통제하는 스위치(상태)를 만듭니다.
+    const [isAuthOpen, setIsAuthOpen] = useState(false);
 
-         {/* 2-2. 우측 지도 (사이드바 제외하고 채우기)*/}
-         <MapContainer />
-      </div>
-    </div>
-  );
+    return (
+        // React 컴포넌트는 반드시 하나의 부모 태그(여기서는 빈 태그 <> </>)로 감싸야 합니다.
+        <>
+            {/* 와이어프레임 메인화면 가상 레이아웃 */}
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+                <div className="text-center space-y-4">
+                    <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+                        veglu 지도 🗺️
+                    </h1>
+                    <p className="text-gray-500 max-w-sm text-sm">
+                        지도를 통해 주변 정보를 한눈에 확인해 보세요.
+                    </p>
+
+                    {/* 모달을 여는 시작하기 버튼 */}
+                    <button
+                        onClick={() => setIsAuthOpen(true)}
+                        className="mt-4 px-6 py-3 bg-gray-950 hover:bg-gray-800 text-white font-medium rounded-xl text-sm transition-all shadow-md active:scale-95"
+                    >
+                        시작하기 (로그인)
+                    </button>
+                </div>
+            </div>
+
+            {/* 2. 메인 화면 최상단에 모달을 대기시킵니다.
+        ❌ <LoginForm />은 절대로 여기서 따로 부르면 안 됩니다! AuthModal이 알아서 띄워줍니다.
+      */}
+            <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+        </>
+    );
 }

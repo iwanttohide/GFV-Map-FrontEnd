@@ -4,11 +4,10 @@ import React, { useState } from 'react';
 import AuthModal from "@/components/auth/AuthModal";
 
 export default function MainPage() {
-    // 1. 모달이 열려있는지 닫혀있는지 통제하는 스위치(상태)를 만듭니다.
+    // 1. 모달이 열려있는지 닫혀있는지 통제하는 스위치.
     const [isAuthOpen, setIsAuthOpen] = useState(false);
 
     return (
-        // React 컴포넌트는 반드시 하나의 부모 태그(여기서는 빈 태그 <> </>)로 감싸야 합니다.
         <>
             {/* 와이어프레임 메인화면 가상 레이아웃 */}
             <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
@@ -30,9 +29,7 @@ export default function MainPage() {
                 </div>
             </div>
 
-            {/* 2. 메인 화면 최상단에 모달을 대기시킵니다.
-        ❌ <LoginForm />은 절대로 여기서 따로 부르면 안 됩니다! AuthModal이 알아서 띄워줍니다.
-      */}
+            {/* 2. 메인 화면 최상단에 모달을 대기. */}
             <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
         </>
     );

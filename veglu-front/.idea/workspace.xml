@@ -4,13 +4,102 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2ea713ea-5a91-40f0-94b7-6f28d8ecdbdb" name="변경" comment="Feat: 로그인/회원가입 API 기능구현">
-      <change afterPath="$PROJECT_DIR$/src/components/auth/google/callback/page.tsx" afterDir="false" />
+    <list default="true" id="2ea713ea-5a91-40f0-94b7-6f28d8ecdbdb" name="변경" comment="Feat: 로그인/회원가입/소셜로그인 API 응답 기능 구현">
       <change beforePath="$PROJECT_DIR$/../.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/.gitattributes" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/GVF_Map BackEnd 파일 구성도.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/build.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/gradle/wrapper/gradle-wrapper.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/gradlew" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/gradlew.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/settings.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/GfvMapApplication.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/auth/AuthController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/auth/AuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/auth/CustomUserDetailsService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/config/CorsConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/config/SecurityConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/controller/AuthController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/controller/MainController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/controller/RestaurantController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/controller/ReviewController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/controller/ReviewReplyController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/controller/ReviewReportController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/controller/Test.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/request/LoginRequestDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/request/RefreshRequestDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/request/ResendVerificationRequestDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/request/RestaurantSearchRequestDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/request/ReviewCreateRequestDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/request/ReviewReplyCreateRequestDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/request/ReviewReplyUpdateRequestDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/request/ReviewReportCreateRequestDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/request/ReviewUpdateRequestDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/request/SignupRequestDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/request/VerifyEmailRequestDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/response/GoogleUserInfoDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/response/KakaoUserInfoDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/response/MenuResponseDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/response/NaverUserInfoDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/response/RestaurantResponseDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/response/RestaurantSearchResponseDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/response/ReviewReplyResponseDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/response/ReviewReportResponseDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/response/ReviewResponseDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/dto/response/TokenResponseDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/entity/Favorite.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/entity/Menu.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/entity/Photo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/entity/RefreshToken.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/entity/Restaurant.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/entity/Review.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/entity/ReviewReply.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/entity/ReviewReport.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/entity/User.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/entity/UserPreference.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/entity/VerificationCode.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/enums/MenuCategory.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/enums/OwnerType.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/enums/PhotoType.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/enums/PriceRange.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/enums/ReportCategory.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/enums/ReportStatus.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/enums/RestaurantStatus.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/enums/UserProvider.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/enums/UserRole.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/enums/VeganType.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/exception/CustomException.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/exception/ErrorCode.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/exception/GlobalExceptionHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/jwt/JwtAuthenticationFilter.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/jwt/JwtProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/jwt/JwtTokenProvider.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/repository/MenuRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/repository/RefreshTokenRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/repository/RestaurantRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/repository/RestaurantSearchSpec.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/repository/ReviewReplyRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/repository/ReviewReportRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/repository/ReviewRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/repository/UserRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/repository/VerificationCodeRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/service/AuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/service/EmailService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/service/GoogleOAuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/service/KakaoOAuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/service/NaverOAuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/service/RestaurantService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/service/ReviewReplyService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/service/ReviewReportService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/java/com/tj/GFV_Map/service/ReviewService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/main/resources/application.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/test/java/com/tj/GFV_Map/GfvMapApplicationTests.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../veglu-back/src/test/java/com/tj/GFV_Map/test.http" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/auth/LoginForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/auth/LoginForm.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/auth/SignUpForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/auth/SignUpForm.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/auth/SocialLogin.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/auth/SocialLogin.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -66,27 +155,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Gradle.veglu-back 빌드.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "Spring Boot.GfvMapApplication.executor": "Run",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "apitest",
-    "ignore.virus.scanning.warn.message": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/NextjsProjects/veglu/veglu-front",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "reference.projectsettings.compiler.javacompiler",
-    "ts.external.directory.path": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2026.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Gradle.veglu-back 빌드.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;Spring Boot.GfvMapApplication.executor&quot;: &quot;Run&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;apitest&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/NextjsProjects/veglu/veglu-front&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;모듈&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;reference.projectsettings.compiler.javacompiler&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Program Files\\JetBrains\\IntelliJ IDEA 2026.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="GfvMapApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
       <option name="ALTERNATIVE_JRE_PATH" value="corretto-21" />
@@ -152,7 +244,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780375485275</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Feat: 로그인/회원가입/소셜로그인 API 응답 기능 구현">
+      <option name="closed" value="true" />
+      <created>1780387407336</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1780387407336</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -175,7 +275,8 @@
     <MESSAGE value="Feat: 사진첩 모달창 구현" />
     <MESSAGE value="Feat: 마이페이지, 프로필수정 기능 구현" />
     <MESSAGE value="Feat: 로그인/회원가입 API 기능구현" />
-    <option name="LAST_COMMIT_MESSAGE" value="Feat: 로그인/회원가입 API 기능구현" />
+    <MESSAGE value="Feat: 로그인/회원가입/소셜로그인 API 응답 기능 구현" />
+    <option name="LAST_COMMIT_MESSAGE" value="Feat: 로그인/회원가입/소셜로그인 API 응답 기능 구현" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

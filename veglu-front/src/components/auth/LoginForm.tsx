@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import SocialLogin from './SocialLogin';
 
 interface LoginFormProps {
     setViewMode: (mode: 'LOGIN' | 'SIGNUP' | 'FIND_ID' | 'FIND_PW') => void;
@@ -29,7 +30,7 @@ export default function LoginForm({ setViewMode, onClose }: LoginFormProps) {
 
         try {
             // 1. 순수 fetch API 방식을 활용한 실제 백엔드 서버 값 검증 요청
-            const response = await fetch('http://localhost:8080/api/v1/auth/login', {
+            const response = await fetch('http://192.168.7.120:5000/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -65,11 +66,10 @@ export default function LoginForm({ setViewMode, onClose }: LoginFormProps) {
         }
     };
 
-    // 소셜 로그인 인가코드 플로우 진입 트리거 함수 (임의 핸들러)
-    const handleSocialLogin = (provider: 'kakao' | 'naver' | 'google') => {
-        alert(`🌱 [OAuth 2.0] ${provider} 인가코드 발급 링크로 리다이렉트 동선을 준비 중입니다.`);
-        // 추후 기획대로 카카오/네이버 주소창 이동 로직 배치 구역
-    };
+    // ──────────────────────────────────────────────────────────
+    // ✂️ [중복 도려냄] 가짜 Key가 들어있던 handleSocialLogin 함수는
+    // 이제 독립된 <SocialLogin /> 컴포넌트가 완벽히 전담하므로 삭제했습니다.
+    // ──────────────────────────────────────────────────────────
 
     return (
         <div className="w-full space-y-5 text-xs select-none">
@@ -146,50 +146,7 @@ export default function LoginForm({ setViewMode, onClose }: LoginFormProps) {
                     회원가입
                 </button>
             </div>
-
-            {/* 소셜 로그인 */}
-            <div className="space-y-3">
-                <div className="flex items-center my-2">
-                    <div className="flex-1 border-t border-gray-200"></div>
-                    <span className="px-3 text-[10px] text-gray-400 font-bold uppercase tracking-wider">간편 소셜 로그인</span>
-                    <div className="flex-1 border-t border-gray-200"></div>
-                </div>
-
-                {/* 소셜 버튼 그리드 컨테이너 팩 */}
-                <div className="grid grid-cols-1 gap-2.5">
-
-                    {/* 카카오 로그인 단추 */}
-                    <button
-                        type="button"
-                        onClick={() => handleSocialLogin('kakao')}
-                        className="w-full py-3 bg-[#FEE500] hover:bg-[#FEE500]/90 text-[#191919] font-bold rounded-xl transition-all flex items-center justify-center space-x-2 shadow-sm relative active:scale-[0.99]"
-                    >
-                        <span className="absolute left-4 text-sm">💬</span>
-                        <span>카카오로 시작하기</span>
-                    </button>
-
-                    {/* 네이버 로그인 단추 */}
-                    <button
-                        type="button"
-                        onClick={() => handleSocialLogin('naver')}
-                        className="w-full py-3 bg-[#03C75A] hover:bg-[#03C75A]/90 text-white font-bold rounded-xl transition-all flex items-center justify-center space-x-2 shadow-sm relative active:scale-[0.99]"
-                    >
-                        <span className="absolute left-4 text-sm">N</span>
-                        <span>네이버로 시작하기</span>
-                    </button>
-
-                    {/* 구글 로그인 단추 */}
-                    <button
-                        type="button"
-                        onClick={() => handleSocialLogin('google')}
-                        className="w-full py-3 bg-white hover:bg-gray-50 text-gray-700 font-bold rounded-xl border border-gray-200 transition-all flex items-center justify-center space-x-2 shadow-sm relative active:scale-[0.99]"
-                    >
-                        <span className="absolute left-4 text-sm">🔑</span>
-                        <span>Google 계정으로 연동</span>
-                    </button>
-
-                </div>
-            </div>
+            <SocialLogin />
 
         </div>
     );

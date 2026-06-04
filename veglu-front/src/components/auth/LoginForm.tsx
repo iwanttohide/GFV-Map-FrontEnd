@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation'; // ◀ 1. Next.js 화면 이동 훅 수입
+import { useRouter } from 'next/navigation';
 import SocialLogin from './SocialLogin';
 
 interface LoginFormProps {
@@ -10,7 +10,7 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ setViewMode, onClose }: LoginFormProps) {
-    const router = useRouter(); // ◀ 2. 라우터 객체 초기화
+    const router = useRouter();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -47,19 +47,32 @@ export default function LoginForm({ setViewMode, onClose }: LoginFormProps) {
             }
 
             const data = await response.json();
+
+            // ──────────────────────────────────────────────────────────
+            // 🔄 [리팩토링 반영] MainPage의 자동 로그인 레이어와 토큰 이름 동기화
+            // ──────────────────────────────────────────────────────────
             if (data.accessToken) {
-                localStorage.setItem('user_token', data.accessToken);
-                localStorage.setItem('user_nickname', data.user?.nickname || '위치삼');
-                localStorage.setItem('user_avatar', data.user?.avatar || '🥑');
+                // MainPage가 읽어가는 이름인 'accessToken', 'refreshToken' 구조로 금고 고정
+                localStorage.setItem('accessToken', data.accessToken);
+                if (data.refreshToken) {
+                    localStorage.setItem('refreshToken', data.refreshToken);
+                }
+
+                // 💡 [임시 데이터 박멸] 백엔드 실물 DB 유저 데이터 매핑
+                // 백엔드가 내려주는 DTO 형태(철자)가 user.nickname 인지, profileImageUrl 인지
+                // 팀원분 자바 코드를 보고 최종 체크해 맞추시면 됩니다.
+                localStorage.setItem('user_nickname', data.user?.nickname || '익명유저');
+
+                // 유저가 사진을 등록 안 해서 null 이나 'default'가 오더라도 안전벨트 텍스트로 임시 수입
+                localStorage.setItem('user_avatar', data.user?.profileImageUrl || data.user?.avatar || 'default');
             }
+            // ──────────────────────────────────────────────────────────
 
-            // ◀ 3. [선택 반영] 모달을 닫아준 직후, 지도가 있는 메인 홈('/')으로 즉시 내비게이션 이동
+            // ◀ 모달을 닫아준 직후, 지도가 있는 메인 홈('/')으로 즉시 내비게이션 이동
             onClose();
-            router.push('/');
 
-            // 만약 메인 화면으로 이동하면서 전체 Context나 로그아웃 버튼 등의 UI를
-            // 깔끔하게 새로고침 렌더링하고 싶다면 아래 한 줄을 대신 쓰셔도 좋습니다.
-            // window.location.href = '/';
+            // 💡 팁: 상태 세션 변화를 감지해 헤더나 사이드바 UI를 한 번에 새로고침 렌더링하려면
+            window.location.href = '/';
 
         } catch (err) {
             setError('서버 연결에 실패했습니다. 네트워크 상태를 확인해 주세요.');

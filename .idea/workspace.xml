@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="d711368c-e0f6-4887-abee-42553ffd9e39" name="변경" comment="Feat: added branch mainpage&#10;Header.tsx 추가&#10;MapContainer.tsx 추가&#10;Sidebar.tsx 추가">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/veglu-front/src/components/auth/AuthModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/veglu-front/src/components/auth/AuthModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/veglu-front/src/components/auth/LoginForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/veglu-front/src/components/auth/LoginForm.tsx" afterDir="false" />
-    </list>
+    <list default="true" id="d711368c-e0f6-4887-abee-42553ffd9e39" name="변경" comment="Feat: added branch mainpage&#10;Header.tsx 추가&#10;MapContainer.tsx 추가&#10;Sidebar.tsx 추가" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -27,6 +23,12 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/ksw1360/GFV-Map-FrontEnd.git",
+    "accountId": "3349252a-5ace-4edb-9d9e-5af0ec0eebb3"
+  }
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5,
   &quot;fromUser&quot;: false
@@ -47,13 +49,16 @@
     "git-widget-placeholder": "mainpage",
     "ignore.virus.scanning.warn.message": "true",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/NextjsProjects/veglu",
+    "last_opened_file_path": "C:/NextjsProjects/veglu/veglu-front/src/components",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "editor.preferences.tabs",
     "ts.external.directory.path": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2026.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external"
   }
 }]]></component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\NextjsProjects\veglu\veglu-front\src\components" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\NextjsProjects\veglu\veglu-front\src" />
     </key>

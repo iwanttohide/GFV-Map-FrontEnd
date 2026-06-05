@@ -6,28 +6,63 @@ import Sidebar from '@/components/main/Sidebar';
 import MapContainer from '@/components/main/MapContainer';
 import AuthModal from '@/components/auth/AuthModal';
 
+interface Restaurant {
+    restaurantId: number;        // 백엔드 명세 고유 ID (id에서 restaurantId로 매칭)
+    name: string;
+    address: string;
+    points: string;              // 💡 "위도/경도" 형태의 단일 문자열 (예: "37.5172/127.0473")
+    matchedMenus: string[];      // 검색어 매칭 메뉴 리스트
+    veganType: string;           // 비건 유형 (예: "LACTO", "VEGAN")
+    rating?: number;             // 사이드바 정렬용 선택 필드
+}
+
 export default function MainPage() {
     const [isAuthOpen, setIsAuthOpen] = useState(false);
-
-    // 💡 중요: 새로고침 시 깜빡이면서 웰컴 스크린이 잠깐 보이는 것을 막기 위해
-    // 기본 상태를 검증 중(isLoading) 레이어로 가드할 수도 있지만, 일단 기본 흐름을 잡습니다.
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+    // MainPage.tsx 상태 머신 구역
+    const [restaurants, setRestaurants] = useState<Restaurant[]>([]); // 원본 저장소
+    const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
+
+    // 헤더의 검색창/카테고리 값이 바뀔 때 작동할 비동기 네트워크 트래픽 핸들러
+    const handleHeaderFilter = async (filterData: any) => {
+        try {
+            // GFV-Map_API명세서 상의 식당 검색 엔드포인트 연동
+            const response = await fetch(`http://192.168.7.120:5000/restaurant/search?keyword=${filterData.keyword}&searchCategory=${filterData.searchCategory}`);
+            if (response.ok) {
+                const data = await response.json();
+                setRestaurants(data); // 데이터 바인딩 ➔ 지도 마커와 사이드바 리스트 동시 자동 동기화!
+            }
+        } catch (err) {
+            console.error("식당 검색 조회 에러:", err);
+        }
+    };
+
+    // 💡 [원인 2 교정] 메인 본체 진입 시 혹은 로그인 직후 빈 화면 방지용 최초 1회 로드 함수
+    const fetchInitialRestaurants = async () => {
+        try {
+            // 키워드가 없을 때 전체 혹은 기본 리스트를 리턴하는 엔드포인트 호출
+            const response = await fetch('http://192.168.7.120:5000/restaurant/search?keyword=&searchCategory=store');
+            if (response.ok) {
+                const data = await response.json();
+                setRestaurants(data); // 초기에 맵에 뿌려질 시드 데이터 장착
+            }
+        } catch (err) {
+            console.error("초기 식당 데이터 로드 실패:", err);
+        }
+    };
+
     // ──────────────────────────────────────────────────────────
-    // 🔄 [신규 추가] 새로고침 시 자동 토큰 검증 및 재발급 레이어
+    // 🔄 새로고침 시 자동 토큰 검증 및 재발급 레이어 (기존 로직 100% 유지)
     // ──────────────────────────────────────────────────────────
     useEffect(() => {
         const checkAuthAndRefresh = async () => {
-            // 1. 로컬스토리지나 쿠키에 기존 토큰 흔적이 남아있는지 먼저 검사합니다.
             const accessToken = localStorage.getItem('accessToken');
             const refreshToken = localStorage.getItem('refreshToken');
 
-            // 아예 토큰 흔적이 없다면 처음 방문한 유저이므로 그냥 로그인 전 화면 유지
             if (!accessToken && !refreshToken) return;
 
             try {
-                // 2. 팀원 백엔드 컴퓨터의 토큰 재발급 엔드포인트 주소를 찌릅니다.
-                // (일반적으로 Refresh Token을 헤더나 바디에 실어 보냅니다.)
                 const response = await fetch('http://192.168.7.120:5000/auth/refresh', {
                     method: 'POST',
                     headers: {
@@ -40,16 +75,14 @@ export default function MainPage() {
                 if (response.ok) {
                     const data = await response.json();
 
-                    // 3. 백엔드가 새로 갱신해 준 따끈따끈한 새 토큰을 다시 금고에 저장
                     localStorage.setItem('accessToken', data.accessToken);
                     if (data.refreshToken) {
                         localStorage.setItem('refreshToken', data.refreshToken);
                     }
 
-                    // 4. 리액트 스위치를 켜서 메인 지도로 강제 워프시킵니다.
                     setIsLoggedIn(true);
+                    fetchInitialRestaurants(); // 💡 자동 로그인 연장 성공 시 즉시 초기 데이터 충전!
                 } else {
-                    // 토큰이 아예 유효기간 만료되어 거절당했다면 청소하고 튕겨내기
                     localStorage.removeItem('accessToken');
                     localStorage.removeItem('refreshToken');
                 }
@@ -59,12 +92,13 @@ export default function MainPage() {
         };
 
         checkAuthAndRefresh();
-    }, []); // ◀ 빈 배열: 새로고침 후 브라우저 창이 딱 켜진 최초 1회만 발동!
+    }, []);
 
     // 로그인 모달 성공 시 메인 지도 UI 활성화
     const handleModalClose = () => {
         setIsAuthOpen(false);
         setIsLoggedIn(true);
+        fetchInitialRestaurants(); // 💡 모달 로그인 즉시 성공 시에도 데이터 즉시 수입!
     };
 
     // 로그아웃 클릭 시 금고 비우고 메인 첫 웰컴 안내 스크린으로 이탈
@@ -73,6 +107,7 @@ export default function MainPage() {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             setIsLoggedIn(false);
+            setRestaurants([]); // 보안을 위해 리스트 초기화
         }
     };
 
@@ -99,14 +134,20 @@ export default function MainPage() {
                     </div>
                 </div>
             ) : (
-                /* 시나리오 B: 로그인 후 (본체 비건 지도 시스템) */
-                <div className="h-screen w-screen flex flex-col overflow-hidden select-none bg-white animate-in fade-in duration-500">
-                    <Header onLogout={handleLogout} />
+                /* 시나리오 B 구역 JSX 조립 */
+                <div className="h-screen w-screen flex flex-col bg-white overflow-hidden">
+                    <Header onLogout={handleLogout} onFilterChange={handleHeaderFilter} />
 
-                    <div className="flex-1 relative w-full overflow-hidden">
-                        <MapContainer />
+                    {/* 💡 [수정] flex-grow 대신 높이 calc를 통해 지도 영역을 강제로 벌려줍니다 */}
+                    <div className="relative w-full h-[calc(100vh-64px)] overflow-hidden">
+                        <MapContainer restaurants={restaurants} selectedId={selectedShopId} />
+
                         <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10">
-                            <Sidebar />
+                            <Sidebar
+                                restaurants={restaurants}
+                                selectedId={selectedShopId}
+                                onShopSelect={(id) => setSelectedShopId(id)}
+                            />
                         </div>
                     </div>
                 </div>

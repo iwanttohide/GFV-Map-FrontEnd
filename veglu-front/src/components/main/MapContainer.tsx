@@ -1,30 +1,127 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import Script from 'next/script';
 
-export default function MapContainer() {
+interface Restaurant {
+    restaurantId: number;
+    name: string;
+    address: string;
+    points: string; // "위도/경도" 슬래시 문자열 구조
+    matchedMenus: string[];
+    veganType: string;
+}
+
+interface MapContainerProps {
+    restaurants: Restaurant[];
+    selectedId: number | null;
+}
+
+export default function MapContainer({ restaurants, selectedId }: MapContainerProps) {
+    const mapContainerRef = useRef<HTMLDivElement>(null);
+    const mapInstance = useRef<any>(null);
+    const clustererInstance = useRef<any>(null);
+    const markersRef = useRef<any[]>([]);
+
+    // 💡 [방어선 구축] kakao 객체가 완전히 준비되었을 때만 안전하게 지도를 그리는 이니셜라이저
+    const initKakaoMap = () => {
+        if (typeof window === 'undefined' || !window.kakao || !window.kakao.maps || !mapContainerRef.current) {
+            console.warn('⚠️ 카카오 지도 인프라가 아직 로드되지 않아 대기합니다.');
+            return;
+        }
+
+        const container = mapContainerRef.current;
+        const options = {
+            center: new window.kakao.maps.LatLng(37.5172, 127.0473), // 샐러디 강남구청역점 인근 초점
+            level: 4,
+        };
+
+        const map = new window.kakao.maps.Map(container, options);
+        mapInstance.current = map;
+
+        clustererInstance.current = new window.kakao.maps.MarkerClusterer({
+            map: map,
+            averageCenter: true,
+            minLevel: 6,
+        });
+
+        drawMapMarkers();
+    };
+
+    const drawMapMarkers = () => {
+        const map = mapInstance.current;
+        const clusterer = clustererInstance.current;
+        if (!map || !clusterer) return;
+
+        clusterer.clear();
+        markersRef.current.forEach(marker => marker.setMap(null));
+        markersRef.current = [];
+
+        const newMarkers = restaurants.map((shop) => {
+            if (shop.points && shop.points.includes('/')) {
+                const [latStr, lngStr] = shop.points.split('/');
+                const latitude = parseFloat(latStr);
+                const longitude = parseFloat(lngStr);
+
+                if (!isNaN(latitude) && !isNaN(longitude)) {
+                    const markerPosition = new window.kakao.maps.LatLng(latitude, longitude);
+                    const marker = new window.kakao.maps.Marker({
+                        position: markerPosition,
+                        title: shop.name
+                    });
+                    return marker;
+                }
+            }
+            return null;
+        }).filter(m => m !== null) as any[];
+
+        markersRef.current = newMarkers;
+        clusterer.addMarkers(newMarkers);
+    };
+
+    useEffect(() => {
+        if (mapInstance.current) {
+            drawMapMarkers();
+        }
+    }, [restaurants]);
+
+    useEffect(() => {
+        const map = mapInstance.current;
+        if (!map || !selectedId) return;
+
+        const targetShop = restaurants.find(item => item.restaurantId === selectedId);
+        if (targetShop && targetShop.points && targetShop.points.includes('/')) {
+            const [latStr, lngStr] = targetShop.points.split('/');
+            const moveLocation = new window.kakao.maps.LatLng(parseFloat(latStr), parseFloat(lngStr));
+            map.panTo(moveLocation);
+        }
+    }, [selectedId, restaurants]);
+
     return (
-        // 👇 absolute inset-0에 min-h-full을 더해 부모가 찌그러트려도 무조건 꽉 차게 늘어나도록 방어합니다.
-        <div className="absolute inset-0 min-w-full min-h-full bg-gray-100 flex items-center justify-center z-0">
-
-            {/* 실제 지도 API가 연동되기 전 가상 백그라운드 */}
-            <div className="text-center space-y-2 pointer-events-none select-none">
-                <div className="text-4xl">🗺️</div>
-                <h2 className="font-bold text-gray-400 text-sm tracking-wide">
-                    지도 영역 (F-MAP-001)
-                </h2>
-                <p className="text-xs text-gray-400">
-                    추후 마커 클러스터링(F-MAP-002) 라이브러리가 주입되는 공간입니다.
-                </p>
-            </div>
-
-            {/* 가상 마커 클러스터 샘플 오버레이 */}
-            <div className="absolute top-1/3 left-1/2 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-lg animate-bounce">
-                5
-            </div>
-            <div className="absolute top-1/2 left-2/3 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-lg animate-bounce delay-150">
-                3
-            </div>
+        // 💡 부모의 찌그러짐을 원천 차단하는 안전 뷰포트 레이아웃 틀
+        <div className="absolute inset-0 min-w-full min-h-full bg-gray-100 z-0">
+            {/* 💡 [교정 구역]
+              1. 프로토콜(https:) 명시
+              2. afterInteractive로 부드럽게 지연 로드하되, onLoad 순간에 kakao 내부 수동 부팅 명령 집행!
+            */}
+            <Script
+                src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=4f896162df4492722dcacb46156da66c&autoload=false&libraries=clusterer"
+                strategy="afterInteractive"
+                onLoad={() => {
+                    // 스크립트 파일이 디스크에 다운로드 완료된 순간 수동 부팅 락 해제
+                    if (window.kakao && window.kakao.maps) {
+                        window.kakao.maps.load(initKakaoMap);
+                    }
+                }}
+            />
+            {/* 실제 카카오 엔진 레이어가 입혀지는 도화지 */}
+            <div ref={mapContainerRef} className="w-full h-full" />
         </div>
     );
+}
+
+declare global {
+    interface Window {
+        kakao: any;
+    }
 }

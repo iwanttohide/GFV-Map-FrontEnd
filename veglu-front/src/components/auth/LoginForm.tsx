@@ -52,14 +52,16 @@ export default function LoginForm({ setViewMode, onClose }: LoginFormProps) {
             // 🔄 [리팩토링 반영] MainPage의 자동 로그인 레이어와 토큰 이름 동기화
             // ──────────────────────────────────────────────────────────
             if (data.accessToken) {
+                const finalAvatar = data.profileImageUrl || data.user?.profileImageUrl || 'default';
+
                 localStorage.setItem('user_email', data.email);
                 localStorage.setItem('accessToken', data.accessToken);
                 if (data.refreshToken) {
                     localStorage.setItem('refreshToken', data.refreshToken);
                 }
 
+                const loginUserEmail = data.email || data.user?.email || 'vegan_user@domain.com';
                 const finalNickname = data.nickname || data.user?.nickname || '익명유저';
-                const finalAvatar = data.profileImageUrl || data.user?.profileImageUrl || 'default';
 
                 localStorage.setItem('user_nickname', finalNickname);
                 localStorage.setItem('user_avatar', finalAvatar);

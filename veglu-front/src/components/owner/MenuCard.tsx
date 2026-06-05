@@ -116,9 +116,6 @@ function EditMenuModal({
 }) {
     const [name, setName] = useState(menu.name);
     const [description, setDescription] = useState(menu.description);
-<<<<<<< HEAD
-    const [thumbnail, setThumbnail] = useState(menu.thumbnail);
-=======
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const [photoPreview, setPhotoPreview] = useState(menu.thumbnail);
 
@@ -128,7 +125,6 @@ function EditMenuModal({
         setPhotoFile(file);
         setPhotoPreview(URL.createObjectURL(file));
     }
->>>>>>> teammate-repo/main
 
     return (
         <div
@@ -142,27 +138,6 @@ function EditMenuModal({
                 <h2 className="text-base font-semibold text-gray-900 mb-5">메뉴 수정</h2>
 
                 <div className="flex flex-col gap-4">
-<<<<<<< HEAD
-                    {/* 이미지 URL */}
-                    <div>
-                        <label className="text-xs text-gray-500 mb-1 block">이미지 URL</label>
-                        <input
-                            type="text"
-                            value={thumbnail}
-                            onChange={(e) => setThumbnail(e.target.value)}
-                            placeholder="https://..."
-                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500"
-                        />
-                        {thumbnail && (
-                            <div className="mt-2 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
-                                <img
-                                    src={thumbnail}
-                                    alt="미리보기"
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                />
-                            </div>
-=======
                     {/* 사진 첨부 */}
                     <div>
                         <label className="block cursor-pointer">
@@ -190,7 +165,6 @@ function EditMenuModal({
                             >
                                 사진 삭제
                             </button>
->>>>>>> teammate-repo/main
                         )}
                     </div>
 
@@ -225,11 +199,7 @@ function EditMenuModal({
                         취소
                     </button>
                     <button
-<<<<<<< HEAD
-                        onClick={() => onSave({ ...menu, name, description, thumbnail })}
-=======
                         onClick={() => onSave({ ...menu, name, description, thumbnail: photoPreview })}
->>>>>>> teammate-repo/main
                         disabled={!name.trim()}
                         className="flex-1 py-2.5 text-sm font-medium text-white bg-green-700 rounded-xl hover:bg-green-800 disabled:opacity-40 transition-colors"
                     >
@@ -241,8 +211,6 @@ function EditMenuModal({
     );
 }
 
-<<<<<<< HEAD
-=======
 function CameraIcon() {
     return (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -252,7 +220,6 @@ function CameraIcon() {
     );
 }
 
->>>>>>> teammate-repo/main
 function KebabIcon() {
     return (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">

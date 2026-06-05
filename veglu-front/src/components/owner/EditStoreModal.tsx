@@ -27,14 +27,9 @@ export default function EditStoreModal({
     const [breakTime, setBreakTime] = useState(store.breakTime);
     const [phone, setPhone] = useState(store.phone);
     const [address, setAddress] = useState(store.address);
-<<<<<<< HEAD
-
-    // 숫자·기호만 허용 (문자 입력 차단)
-=======
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const [photoPreview, setPhotoPreview] = useState(store.thumbnail);
 
->>>>>>> teammate-repo/main
     function filterTimeInput(value: string) {
         return value.replace(/[^0-9:~\-\s]/g, '');
     }
@@ -43,10 +38,6 @@ export default function EditStoreModal({
         return value.replace(/[^0-9\-]/g, '');
     }
 
-<<<<<<< HEAD
-    function handleSave() {
-        onSave({ name, hours, breakTime, phone, address });
-=======
     function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -56,7 +47,6 @@ export default function EditStoreModal({
 
     function handleSave() {
         onSave({ name, hours, breakTime, phone, address, thumbnail: photoPreview });
->>>>>>> teammate-repo/main
     }
 
     return (
@@ -65,18 +55,12 @@ export default function EditStoreModal({
             onClick={onClose}
         >
             <div
-<<<<<<< HEAD
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 px-6 py-6"
-=======
                 className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 px-6 py-6 max-h-[90vh] overflow-y-auto"
->>>>>>> teammate-repo/main
                 onClick={(e) => e.stopPropagation()}
             >
                 <h2 className="text-base font-semibold text-gray-900 mb-5">가게 정보 수정</h2>
 
                 <div className="flex flex-col gap-4">
-<<<<<<< HEAD
-=======
                     {/* 사진 */}
                     <div>
                         <label className="text-xs text-gray-500 mb-1 block">가게 사진</label>
@@ -118,8 +102,6 @@ export default function EditStoreModal({
                             </button>
                         )}
                     </div>
-
->>>>>>> teammate-repo/main
                     {/* 가게 이름 */}
                     <div>
                         <label className="text-xs text-gray-500 mb-1 block">가게 이름</label>
@@ -196,8 +178,6 @@ export default function EditStoreModal({
             </div>
         </div>
     );
-<<<<<<< HEAD
-=======
 }
 
 function CameraIcon() {
@@ -207,5 +187,4 @@ function CameraIcon() {
             <circle cx="12" cy="13" r="4"/>
         </svg>
     );
->>>>>>> teammate-repo/main
 }

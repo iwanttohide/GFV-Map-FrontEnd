@@ -1,15 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-<<<<<<< HEAD
     "lib": ["dom", "dom.iterable", "esnext"],
-=======
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
->>>>>>> teammate-repo/main
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,11 +11,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-<<<<<<< HEAD
     "jsx": "react-jsx",
-=======
-    "jsx": "preserve",
->>>>>>> teammate-repo/main
     "incremental": true,
     "plugins": [
       {
@@ -31,13 +19,7 @@
       }
     ],
     "paths": {
-<<<<<<< HEAD
       "@/*": ["./src/*"]
-=======
-      "@/*": [
-        "./src/*"
-      ]
->>>>>>> teammate-repo/main
     }
   },
   "include": [
@@ -48,11 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-<<<<<<< HEAD
   "exclude": ["node_modules"]
-=======
-  "exclude": [
-    "node_modules"
-  ]
->>>>>>> teammate-repo/main
 }

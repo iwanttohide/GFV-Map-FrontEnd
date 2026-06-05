@@ -12,9 +12,6 @@ export default function AddMenuModal({
 }) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-<<<<<<< HEAD
-    const [thumbnail, setThumbnail] = useState('');
-=======
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const [photoPreview, setPhotoPreview] = useState('');
 
@@ -24,7 +21,6 @@ export default function AddMenuModal({
         setPhotoFile(file);
         setPhotoPreview(URL.createObjectURL(file));
     }
->>>>>>> teammate-repo/main
 
     function handleAdd() {
         if (!name.trim()) return;
@@ -32,11 +28,7 @@ export default function AddMenuModal({
             id: String(Date.now()),
             name,
             description,
-<<<<<<< HEAD
-            thumbnail: thumbnail || 'https://via.placeholder.com/150',
-=======
             thumbnail: photoPreview || 'https://via.placeholder.com/150',
->>>>>>> teammate-repo/main
         });
         onClose();
     }
@@ -53,28 +45,6 @@ export default function AddMenuModal({
                 <h2 className="text-base font-semibold text-gray-900 mb-5">메뉴 추가</h2>
 
                 <div className="flex flex-col gap-4">
-<<<<<<< HEAD
-                    {/* 이미지 링크 */}
-                    <div>
-                        <label className="text-xs text-gray-500 mb-1 block">이미지 URL</label>
-                        <input
-                            type="text"
-                            value={thumbnail}
-                            onChange={(e) => setThumbnail(e.target.value)}
-                            placeholder="https://..."
-                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:border-green-500"
-                        />
-                        {/* 미리보기 */}
-                        {thumbnail && (
-                            <div className="mt-2 w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
-                                <img
-                                    src={thumbnail}
-                                    alt="미리보기"
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                />
-                            </div>
-=======
                     {/* 사진 첨부 */}
                     <div>
                         <label className="block cursor-pointer">
@@ -102,7 +72,6 @@ export default function AddMenuModal({
                             >
                                 사진 삭제
                             </button>
->>>>>>> teammate-repo/main
                         )}
                     </div>
 
@@ -149,8 +118,6 @@ export default function AddMenuModal({
             </div>
         </div>
     );
-<<<<<<< HEAD
-=======
 }
 
 function CameraIcon() {
@@ -160,5 +127,4 @@ function CameraIcon() {
             <circle cx="12" cy="13" r="4"/>
         </svg>
     );
->>>>>>> teammate-repo/main
 }

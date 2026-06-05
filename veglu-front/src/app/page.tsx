@@ -7,67 +7,120 @@ import MapContainer from '@/components/main/MapContainer';
 import AuthModal from '@/components/auth/AuthModal';
 
 interface Restaurant {
-    restaurantId: number;        // 백엔드 명세 고유 ID (id에서 restaurantId로 매칭)
+    restaurantId: number;
     name: string;
     address: string;
-    points: string;              // 💡 "위도/경도" 형태의 단일 문자열 (예: "37.5172/127.0473")
-    matchedMenus: string[];      // 검색어 매칭 메뉴 리스트
-    veganType: string;           // 비건 유형 (예: "LACTO", "VEGAN")
-    rating?: number;             // 사이드바 정렬용 선택 필드
+    points: string;
+    matchedMenus: string[];
+    veganType: string;
+    rating?: number;
 }
 
 export default function MainPage() {
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-    // MainPage.tsx 상태 머신 구역
-    const [restaurants, setRestaurants] = useState<Restaurant[]>([]); // 원본 저장소
+    // ──────────────────────────────────────────────────────────
+    // 💡 [우회 핵심] 백엔드 버그 방어를 위한 원본 보관소 분리 선언
+    // ──────────────────────────────────────────────────────────
+    const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([]); // ◀ 전체 데이터 백업본
+    const [restaurants, setRestaurants] = useState<Restaurant[]>([]);    // ◀ 화면(지도/사이드바)에 뿌려질 최종본
     const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
 
-    // 헤더의 검색창/카테고리 값이 바뀔 때 작동할 비동기 네트워크 트래픽 핸들러
-    const handleHeaderFilter = async (filterData: { keyword: string; searchCategory: string }) => {
+    // 헤더에서 검색 확정 시 작동하는 비동기 통신 및 프론트 오버라이딩 엔진
+    const handleHeaderFilter = async (filterData: any) => {
+        console.log("➡️ 부모가 전달받은 원본 조건 데이터:", filterData);
+
+        const currentCategory = filterData.searchCategory; // 'region', 'store', 'menu'
+        const currentKeyword = (filterData.keyword || '').trim(); // 공백 제거
+
+        // 🎯 [프론트 우회 락 해제 1] 검색어가 비어있다면 백엔드에 찌르지 않고 원본 백업본을 그대로 복구합니다!
+        if (currentKeyword === '') {
+            console.log("💡 검색어가 비어있어 백엔드 요청을 생략하고 프론트 원본 데이터로 복원합니다.");
+            setRestaurants(allRestaurants);
+            setSelectedShopId(null);
+            return;
+        }
+
+        try {
+            const accessToken = localStorage.getItem('accessToken');
+            const targetKeyword = encodeURIComponent(currentKeyword);
+
+            let apiUrl = `http://192.168.7.120:5000/restaurant/name?keyword=${targetKeyword}`;
+            if (currentCategory === 'region') {
+                apiUrl = `http://192.168.7.120:5000/restaurant/region?keyword=${targetKeyword}`;
+            } else if (currentCategory === 'menu') {
+                apiUrl = `http://192.168.7.120:5000/restaurant/menu?keyword=${targetKeyword}`;
+            }
+
+            console.log(`🔎 [검색 실행] 백엔드로 찌르는 최종 주소 ➔ ${apiUrl}`);
+
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': accessToken ? `Bearer ${accessToken}` : ''
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const sanitizedData = Array.isArray(data) ? data : [];
+
+                // 🎯 [프론트 우회 락 해제 2] 만약 검색 결과가 없어서 백엔드가 빈 배열 []을 뱉었는데,
+                // 혹시 모를 오작동을 방지하기 위해 프론트 내부에서 상호명 수동 필터링 안전벨트를 한번 더 채웁니다.
+                if (sanitizedData.length === 0 && currentCategory === 'store') {
+                    console.warn("⚠️ 백엔드 결과가 0개여서 프론트 내부 메모리 검색을 임시 가동합니다.");
+                    const fallback = allRestaurants.filter(r => r.name.includes(currentKeyword));
+                    setRestaurants(fallback);
+                } else {
+                    setRestaurants(sanitizedData);
+                }
+
+                setSelectedShopId(null);
+            }
+        } catch (err) {
+            console.error("식당 검색 조회 에러:", err);
+        }
+    };
+
+    // ──────────────────────────────────────────────────────────
+    // 🎯 [우회 핵심] 처음 화면이 켜질 때 DB에 존재하는 데이터를 '확실한 키워드'로 강제 수집
+    // ──────────────────────────────────────────────────────────
+    const fetchInitialRestaurants = async () => {
         try {
             const accessToken = localStorage.getItem('accessToken');
 
-            // GFV-Map_API명세서 상의 식당 검색 엔드포인트 연동
+            // 💡 백엔드 DB에 무조건 들어있을 법한 글자(예: 샐러디를 뽑아내기 위한 '점', '역', '시', '로' 등 공통 조사)를
+            // 우회로 던져서 데이터셋 전체 혹은 일부를 강제로 탈취해 옵니다.
+            // 만약 백엔드에 전체를 주는 전용 엔드포인트(예: /restaurant/list)가 생기면 주소만 바꾸면 됩니다.
             const response = await fetch(
-                `http://192.168.7.120:5000/restaurant/search?keyword=${filterData.keyword || ''}&searchCategory=${filterData.searchCategory || 'store'}`,
+                'http://192.168.7.120:5000/restaurant/name?keyword=', // ◀ 백엔드가 쿼리문 수정하기 전까진 빈값 시 0개이므로, 팀원에게 전체목록 주는 주소 물어보고 교체 가능
                 {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                        // 💡 [처방] 백엔드 시큐리티 장벽을 통과하기 위해 Bearer 토큰 주입!
                         'Authorization': accessToken ? `Bearer ${accessToken}` : ''
                     }
                 }
             );
-
             if (response.ok) {
                 const data = await response.json();
-                setRestaurants(data);
-            }
-        } catch (err) {
-            console.error("식당 검색 조회 실패:", err);
-        }
-    };
+                const sanitizedData = Array.isArray(data) ? data : [];
 
-    // 메인 본체 진입 시 혹은 로그인 직후 빈 화면 방지용 최초 1회 로드 함수
-    const fetchInitialRestaurants = async () => {
-        try {
-            // 키워드가 없을 때 전체 혹은 기본 리스트를 리턴하는 엔드포인트 호출
-            const response = await fetch('http://192.168.7.120:5000/restaurant/search?keyword=&searchCategory=store');
-            if (response.ok) {
-                const data = await response.json();
-                setRestaurants(data); // 초기에 맵에 뿌려질 시드 데이터 장착
+                // 💡 받아온 소중한 실물 식당 배열 군단을 원본 백업본과 화면 출력본 두 곳에 동시에 잠가둡니다.
+                setAllRestaurants(sanitizedData);
+                setRestaurants(sanitizedData);
+
+                console.log("🔥 프론트엔드가 보관에 성공한 마스터 시드 데이터:", sanitizedData.length, "개");
             }
         } catch (err) {
             console.error("초기 식당 데이터 로드 실패:", err);
         }
     };
+    // ──────────────────────────────────────────────────────────
 
-    // ──────────────────────────────────────────────────────────
-    // 🔄 새로고침 시 자동 토큰 검증 및 재발급 레이어 (기존 로직 100% 유지)
-    // ──────────────────────────────────────────────────────────
+    // 새로고침 시 자동 토큰 검증 및 재발급 레이어 (기존 로직 100% 유지)
     useEffect(() => {
         const checkAuthAndRefresh = async () => {
             const accessToken = localStorage.getItem('accessToken');
@@ -94,7 +147,7 @@ export default function MainPage() {
                     }
 
                     setIsLoggedIn(true);
-                    fetchInitialRestaurants(); // 💡 자동 로그인 연장 성공 시 즉시 초기 데이터 충전!
+                    fetchInitialRestaurants();
                 } else {
                     localStorage.removeItem('accessToken');
                     localStorage.removeItem('refreshToken');
@@ -107,26 +160,24 @@ export default function MainPage() {
         checkAuthAndRefresh();
     }, []);
 
-    // 로그인 모달 성공 시 메인 지도 UI 활성화
     const handleModalClose = () => {
         setIsAuthOpen(false);
         setIsLoggedIn(true);
-        fetchInitialRestaurants(); // 💡 모달 로그인 즉시 성공 시에도 데이터 즉시 수입!
+        fetchInitialRestaurants();
     };
 
-    // 로그아웃 클릭 시 금고 비우고 메인 첫 웰컴 안내 스크린으로 이탈
     const handleLogout = () => {
         if (confirm('로그아웃 하시겠습니까?')) {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             setIsLoggedIn(false);
-            setRestaurants([]); // 보안을 위해 리스트 초기화
+            setRestaurants([]);
+            setAllRestaurants([]);
         }
     };
 
     return (
         <>
-            {/* 시나리오 A: 로그인 전 (웰컴 스크린) */}
             {!isLoggedIn ? (
                 <div className="min-h-screen w-screen flex flex-col items-center justify-center bg-gray-50 p-4 select-none">
                     <div className="text-center space-y-4 animate-in fade-in zoom-in-95 duration-300">
@@ -147,11 +198,9 @@ export default function MainPage() {
                     </div>
                 </div>
             ) : (
-                /* 시나리오 B 구역 JSX 조립 */
                 <div className="h-screen w-screen flex flex-col bg-white overflow-hidden">
                     <Header onLogout={handleLogout} onFilterChange={handleHeaderFilter} />
 
-                    {/* 💡 [수정] flex-grow 대신 높이 calc를 통해 지도 영역을 강제로 벌려줍니다 */}
                     <div className="relative w-full h-[calc(100vh-64px)] overflow-hidden">
                         <MapContainer restaurants={restaurants} selectedId={selectedShopId} />
 

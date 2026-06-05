@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-// 💡 기능 명세 연동을 위한 Props 규격 정의
 interface HeaderProps {
     onLogout: () => void;
     onFilterChange?: (filters: { searchCategory: string; keyword: string; selectedTags: string[] }) => void;
@@ -12,16 +11,12 @@ interface HeaderProps {
 export default function Header({ onLogout, onFilterChange }: HeaderProps) {
     const router = useRouter();
 
-    // 검색창 관련 상호작용 상태 기계
     const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
     const [searchCategory, setSearchCategory] = useState('region');
-    const [keyword, setKeyword] = useState(''); // 💡 실시간 검색어 상태 추가
+    const [keyword, setKeyword] = useState('');
     const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // ──────────────────────────────────────────────────────────
-    // 🥑 백엔드 DTO 필드명 명세(nickname, profileImageUrl) 싱크 조절
-    // ──────────────────────────────────────────────────────────
     const [nickname, setNickname] = useState('위치삼');
     const [profileImageUrl, setProfileImageUrl] = useState('default');
     const [isMounted, setIsMounted] = useState(false);
@@ -36,14 +31,22 @@ export default function Header({ onLogout, onFilterChange }: HeaderProps) {
         setIsMounted(true);
     }, []);
 
-    // 💡 [추가 기믹] 검색어 및 상세 필터 변경 사항을 컨트롤 타워(부모)에 무선 전송
-    const notifyParentChange = (nextTags: string[], nextKeyword: string, nextCategory: string) => {
+    // 💡 [개정] 타이핑할 때가 아니라 엔터나 버튼을 눌러 "확정"되었을 때만 부모를 깨우는 단일 컨트롤러
+    const submitSearch = (currentFilters = selectedFilters) => {
         if (onFilterChange) {
             onFilterChange({
-                searchCategory: nextCategory,
-                keyword: nextKeyword,
-                selectedTags: nextTags
+                searchCategory: searchCategory,
+                keyword: keyword.trim(),
+                selectedTags: currentFilters
             });
+        }
+    };
+
+    // 엔터키 입력 감지기
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            setIsFilterDropdownOpen(false); // 검색 실행 시 필터창은 우아하게 닫아줍니다.
+            submitSearch();
         }
     };
 
@@ -55,7 +58,8 @@ export default function Header({ onLogout, onFilterChange }: HeaderProps) {
             nextFilters = [...selectedFilters, filterName];
         }
         setSelectedFilters(nextFilters);
-        notifyParentChange(nextFilters, keyword, searchCategory); // 실시간 동기화 트리거
+        // 상세 배너 필터는 누르는 즉시 직관적으로 검색이 트리거되도록 처리
+        submitSearch(nextFilters);
     };
 
     useEffect(() => {
@@ -83,10 +87,7 @@ export default function Header({ onLogout, onFilterChange }: HeaderProps) {
                 <div className="flex items-center border border-gray-300 rounded-xl bg-white shadow-sm focus-within:ring-2 focus-within:ring-green-600/20 focus-within:border-green-600 transition-all overflow-hidden">
                     <select
                         value={searchCategory}
-                        onChange={(e) => {
-                            setSearchCategory(e.target.value);
-                            notifyParentChange(selectedFilters, keyword, e.target.value);
-                        }}
+                        onChange={(e) => setSearchCategory(e.target.value)}
                         className="h-10 px-3 bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-500 focus:outline-none cursor-pointer"
                     >
                         <option value="region">지역명</option>
@@ -94,22 +95,23 @@ export default function Header({ onLogout, onFilterChange }: HeaderProps) {
                         <option value="menu">메뉴명</option>
                     </select>
 
+                    {/* 💡 [교정 구역] onChange 시 무분별한 부모 호출을 제거하고, 엔터 전용 KeyDown 바인딩 */}
                     <input
                         type="text"
                         value={keyword}
-                        onChange={(e) => {
-                            setKeyword(e.target.value);
-                            notifyParentChange(selectedFilters, e.target.value, searchCategory);
-                            if (onFilterChange) {
-                                onFilterChange({ keyword: e.target.value, searchCategory: searchCategory });
-                            }
-                        }}
+                        onChange={(e) => setKeyword(e.target.value)}
+                        onKeyDown={handleKeyDown}
                         onFocus={() => setIsFilterDropdownOpen(true)}
-                        placeholder="검색어를 입력하세요"
+                        placeholder="검색어를 입력하고 엔터를 누르세요"
                         className="w-full px-4 h-10 text-sm focus:outline-none text-gray-800"
                     />
 
-                    <button type="button" className="p-2.5 text-gray-400 hover:text-green-600 mr-1">
+                    {/* 💡 [교정 구역] 돋보기 버튼 클릭 시 정식으로 검색 집행 */}
+                    <button
+                        type="button"
+                        onClick={() => { setIsFilterDropdownOpen(false); submitSearch(); }}
+                        className="p-2.5 text-gray-400 hover:text-green-600 mr-1 active:scale-95 transition-transform"
+                    >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
@@ -157,7 +159,6 @@ export default function Header({ onLogout, onFilterChange }: HeaderProps) {
                 )}
             </div>
 
-            {/* 우측 상단 유저 정보 및 마이페이지 내비게이션 바 링크 연동 */}
             <div className="flex items-center space-x-3 flex-shrink-0">
                 <button
                     type="button"

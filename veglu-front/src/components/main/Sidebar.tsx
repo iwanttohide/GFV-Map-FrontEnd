@@ -9,6 +9,7 @@ interface Restaurant {
     points: string;
     matchedMenus: string[];
     veganType: string;
+    rating?: number; // 💡 [타입 보완] 정렬 연산 시 깨짐을 방지하기 위해 명시적으로 추가
 }
 
 interface SidebarProps {
@@ -49,9 +50,13 @@ export default function Sidebar({ restaurants, selectedId, onShopSelect }: Sideb
 
                 {/* 식당 카드 리스트 영역 */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    {processedList.map((shop) => (
+                    {/* ──────────────────────────────────────────────────────────
+                       💡 [정밀 교정] map의 두 번째 인자인 배열 순번(index)을 수입합니다.
+                       ────────────────────────────────────────────────────────── */}
+                    {processedList.map((shop, index) => (
                         <div
-                            key={shop.restaurantId} // 💡 고유식별자 교체
+                            // 💡 백엔드가 준 restaurantId 뒤에 -index 순번을 붙여 "절대 중복 불가능한 고유 키"를 생성합니다!
+                            key={`sidebar-shop-${shop.restaurantId}-${index}`}
                             onClick={() => onShopSelect(shop.restaurantId)}
                             className={`p-4 border rounded-2xl bg-white transition-all cursor-pointer hover:border-green-600 hover:shadow-sm ${
                                 selectedId === shop.restaurantId
@@ -66,14 +71,12 @@ export default function Sidebar({ restaurants, selectedId, onShopSelect }: Sideb
                                 <div className="space-y-1 overflow-hidden w-full">
                                     <div className="flex items-center justify-between">
                                         <h3 className="font-bold text-sm text-gray-900 truncate max-w-[180px]">{shop.name}</h3>
-                                        {/* 💡 백엔드가 전송해 준 비건 등급 배지 노출 */}
                                         <span className="text-[9px] bg-green-100 text-green-800 font-extrabold px-1.5 py-0.5 rounded-md flex-shrink-0">
                                             {shop.veganType}
                                         </span>
                                     </div>
                                     <p className="text-xs text-gray-500 truncate">{shop.address}</p>
 
-                                    {/* 💡 검색한 메뉴명이 발견되었을 때의 요약 오버레이 처리 */}
                                     {shop.matchedMenus && shop.matchedMenus.length > 0 && (
                                         <p className="text-[10px] text-gray-400 truncate pt-0.5">
                                             🔍 관련 메뉴: <span className="text-gray-600 font-medium">{shop.matchedMenus.join(', ')}</span>

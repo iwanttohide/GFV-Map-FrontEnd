@@ -23,15 +23,13 @@ export default function MapContainer({ restaurants, selectedId }: MapContainerPr
     const clustererInstance = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
 
-    // 지도를 진짜 생성하는 이니셜라이저 본체
     const initKakaoMap = () => {
-        // 이미 지도가 생성되어 있다면 중복 생성을 방지합니다.
         if (mapInstance.current) return;
         if (!mapContainerRef.current) return;
 
         const container = mapContainerRef.current;
         const options = {
-            center: new window.kakao.maps.LatLng(37.5172, 127.0473), // 샐러디 강남구청역점 인근 초점
+            center: new window.kakao.maps.LatLng(37.5172, 127.0473),
             level: 4,
         };
 
@@ -47,55 +45,83 @@ export default function MapContainer({ restaurants, selectedId }: MapContainerPr
         drawMapMarkers();
     };
 
+    // ──────────────────────────────────────────────────────────
+    // 🎯 [정밀 수선 구역] 마커 강제 드로잉 엔진 보강
+    // ──────────────────────────────────────────────────────────
     const drawMapMarkers = () => {
         const map = mapInstance.current;
         const clusterer = clustererInstance.current;
         if (!map || !clusterer) return;
 
+        console.log("📍 [지도 마킹 엔진 개시] 수입된 식당 개수:", restaurants.length);
+
+        // 💡 [디버깅 비밀무기] 실제로 백엔드가 던져준 데이터 가방의 첫 번째 껍데기를 까서 봅니다.
+        if (restaurants.length > 0) {
+            console.log("🔍 백엔드가 준 첫 번째 식당 실물 명세 데이터 원본:", restaurants[0]);
+        }
+
+        // 1. 기존 마커 잔상 완벽 청소
         clusterer.clear();
-        markersRef.current.forEach(marker => marker.setMap(null));
+        if (markersRef.current && markersRef.current.length > 0) {
+            markersRef.current.forEach(marker => {
+                if (marker) marker.setMap(null);
+            });
+        }
         markersRef.current = [];
 
-        const newMarkers = restaurants.map((shop) => {
-            if (shop.points && shop.points.includes('/')) {
-                const [latStr, lngStr] = shop.points.split('/');
-                const latitude = parseFloat(latStr);
-                const longitude = parseFloat(lngStr);
+        // 2. 어떤 포맷이 들어와도 좌표를 찾아내는 하이브리드 파싱 엔진 가동
+        const newMarkers = restaurants.map((shop: any) => {
+            let finalLat: number | null = null;
+            let finalLng: number | null = null;
 
-                if (!isNaN(latitude) && !isNaN(longitude)) {
-                    const markerPosition = new window.kakao.maps.LatLng(latitude, longitude);
-                    const marker = new window.kakao.maps.Marker({
-                        position: markerPosition,
-                        title: shop.name
-                    });
-                    return marker;
+            // 주동선 A: points 문자열이 존재할 때 (슬래시 / 또는 콤마 , 모두 가드)
+            if (shop.points && typeof shop.points === 'string') {
+                const separator = shop.points.includes('/') ? '/' : (shop.points.includes(',') ? ',' : null);
+                if (separator) {
+                    const [latStr, lngStr] = shop.points.split(separator);
+                    finalLat = parseFloat(latStr.trim());
+                    finalLng = parseFloat(lngStr.trim());
                 }
             }
+
+            // 주동선 B: 만약 백엔드가 points를 안 주고 lat, lng 이나 latitude, longitude로 직접 쪼개 줬을 때 우회로 확보
+            if (finalLat === null || isNaN(finalLat)) {
+                const fallbackLat = shop.latitude || shop.lat;
+                const fallbackLng = shop.longitude || shop.lng;
+                if (fallbackLat && fallbackLng) {
+                    finalLat = typeof fallbackLat === 'string' ? parseFloat(fallbackLat) : fallbackLat;
+                    finalLng = typeof fallbackLng === 'string' ? parseFloat(fallbackLng) : fallbackLng;
+                }
+            }
+
+            // 최종 위도 경도가 정상적인 숫자로 도출되었다면 카카오 마커 확정 격발
+            if (finalLat && finalLng && !isNaN(finalLat) && !isNaN(finalLng)) {
+                const markerPosition = new window.kakao.maps.LatLng(finalLat, finalLng);
+                const marker = new window.kakao.maps.Marker({
+                    position: markerPosition,
+                    title: shop.name,
+                    map: map
+                });
+                return marker;
+            }
+
+            console.warn(`⚠️ [좌표 유실 경고] '${shop.name}' 식당의 좌표 정보를 파싱할 수 없어 마킹에서 제외됨. 원본 points:`, shop.points);
             return null;
         }).filter(m => m !== null) as any[];
 
+        // 3. 클러스터러 주입
         markersRef.current = newMarkers;
         clusterer.addMarkers(newMarkers);
-    };
 
-    // ──────────────────────────────────────────────────────────
-    // 🎯 [결정적 교정 핵심] onLoad 배신을 방어하는 실시간 이니셜라이저 트리거
-    // ──────────────────────────────────────────────────────────
-    useEffect(() => {
-        // 이미 스크립트가 브라우저에 존재해서 onLoad가 안 돌 때를 대비한 안전 가드
-        if (typeof window !== 'undefined' && window.kakao && window.kakao.maps) {
-            window.kakao.maps.load(() => {
-                initKakaoMap();
-            });
-        }
-    }, []);
+        console.log(`✅ [마킹 성공 완료] 최종 지도에 주입된 핀 마커 개수: ${newMarkers.length}개`);
+    };
     // ──────────────────────────────────────────────────────────
 
     useEffect(() => {
         if (mapInstance.current) {
             drawMapMarkers();
         }
-    }, [restaurants]);
+    }, [restaurants]); // 💡 부모의 검색 결과 배열이 뒤바뀌면 지체 없이 격발됩니다.
 
     useEffect(() => {
         const map = mapInstance.current;
@@ -104,7 +130,7 @@ export default function MapContainer({ restaurants, selectedId }: MapContainerPr
         const targetShop = restaurants.find(item => item.restaurantId === selectedId);
         if (targetShop && targetShop.points && targetShop.points.includes('/')) {
             const [latStr, lngStr] = targetShop.points.split('/');
-            const moveLocation = new window.kakao.maps.LatLng(parseFloat(latStr), parseFloat(lngStr));
+            const moveLocation = new window.kakao.maps.LatLng(parseFloat(latStr.trim()), parseFloat(lngStr.trim()));
             map.panTo(moveLocation);
         }
     }, [selectedId, restaurants]);
@@ -115,13 +141,11 @@ export default function MapContainer({ restaurants, selectedId }: MapContainerPr
                 src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=604e9a64453d6167f7a58e8231871b49&autoload=false&libraries=clusterer"
                 strategy="afterInteractive"
                 onLoad={() => {
-                    // 처음 스크립트가 로드되었을 때 실행되는 안전 통로
                     if (window.kakao && window.kakao.maps) {
                         window.kakao.maps.load(initKakaoMap);
                     }
                 }}
             />
-            {/* 실제 카카오 엔진 레이어가 입혀지는 도화지 */}
             <div ref={mapContainerRef} className="w-full h-full" />
         </div>
     );

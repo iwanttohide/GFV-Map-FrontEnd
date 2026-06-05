@@ -25,7 +25,7 @@ export default function MainPage() {
     // ──────────────────────────────────────────────────────────
     const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([]); // ◀ 전체 데이터 백업본
     const [restaurants, setRestaurants] = useState<Restaurant[]>([]);    // ◀ 화면(지도/사이드바)에 뿌려질 최종본
-    const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
+    const [selectedShopIndex, setSelectedShopIndex] = useState<number | null>(null);
 
     // 헤더에서 검색 확정 시 작동하는 비동기 통신 및 프론트 오버라이딩 엔진
     const handleHeaderFilter = async (filterData: any) => {
@@ -66,18 +66,8 @@ export default function MainPage() {
             if (response.ok) {
                 const data = await response.json();
                 const sanitizedData = Array.isArray(data) ? data : [];
-
-                // 🎯 [프론트 우회 락 해제 2] 만약 검색 결과가 없어서 백엔드가 빈 배열 []을 뱉었는데,
-                // 혹시 모를 오작동을 방지하기 위해 프론트 내부에서 상호명 수동 필터링 안전벨트를 한번 더 채웁니다.
-                if (sanitizedData.length === 0 && currentCategory === 'store') {
-                    console.warn("⚠️ 백엔드 결과가 0개여서 프론트 내부 메모리 검색을 임시 가동합니다.");
-                    const fallback = allRestaurants.filter(r => r.name.includes(currentKeyword));
-                    setRestaurants(fallback);
-                } else {
-                    setRestaurants(sanitizedData);
-                }
-
-                setSelectedShopId(null);
+                setRestaurants(sanitizedData);
+                setSelectedShopIndex(null); // 💡 리셋도 index 기준으로 변경
             }
         } catch (err) {
             console.error("식당 검색 조회 에러:", err);
@@ -202,13 +192,13 @@ export default function MainPage() {
                     <Header onLogout={handleLogout} onFilterChange={handleHeaderFilter} />
 
                     <div className="relative w-full h-[calc(100vh-64px)] overflow-hidden">
-                        <MapContainer restaurants={restaurants} selectedId={selectedShopId} />
+                        <MapContainer restaurants={restaurants} selectedIndex={selectedShopIndex} />
 
                         <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10">
                             <Sidebar
                                 restaurants={restaurants}
-                                selectedId={selectedShopId}
-                                onShopSelect={(id) => setSelectedShopId(id)}
+                                selectedIndex={selectedShopIndex} // 💡 변경
+                                onShopSelect={(index) => setSelectedShopIndex(index)} // 💡 클릭 시 식당의 '배열 순번'을 부모에게 전달
                             />
                         </div>
                     </div>

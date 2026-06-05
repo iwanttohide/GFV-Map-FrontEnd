@@ -14,10 +14,10 @@ interface Restaurant {
 
 interface MapContainerProps {
     restaurants: Restaurant[];
-    selectedId: number | null;
+    selectedIndex: number | null;
 }
 
-export default function MapContainer({ restaurants, selectedId }: MapContainerProps) {
+export default function MapContainer({ restaurants, selectedIndex }: MapContainerProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<any>(null);
     const clustererInstance = useRef<any>(null);
@@ -125,15 +125,42 @@ export default function MapContainer({ restaurants, selectedId }: MapContainerPr
 
     useEffect(() => {
         const map = mapInstance.current;
-        if (!map || !selectedId) return;
+        if (!map || selectedIndex === null) return;
 
-        const targetShop = restaurants.find(item => item.restaurantId === selectedId);
-        if (targetShop && targetShop.points && targetShop.points.includes('/')) {
-            const [latStr, lngStr] = targetShop.points.split('/');
-            const moveLocation = new window.kakao.maps.LatLng(parseFloat(latStr.trim()), parseFloat(lngStr.trim()));
-            map.panTo(moveLocation);
+        // 부모가 준 식당 리스트 중 현재 사용자가 사이드바에서 클릭한 그 녀석을 찾아냅니다.
+        const targetShop = restaurants[selectedIndex];
+
+        if (targetShop) {
+            // 하이브리드 좌표 분리 처리 멀티 가드 가동
+            let finalLat: number | null = null;
+            let finalLng: number | null = null;
+
+            if (targetShop.points && typeof targetShop.points === 'string') {
+                const separator = targetShop.points.includes('/') ? '/' : (targetShop.points.includes(',') ? ',' : null);
+                if (separator) {
+                    const [latStr, lngStr] = targetShop.points.split(separator);
+                    finalLat = parseFloat(latStr.trim());
+                    finalLng = parseFloat(lngStr.trim());
+                }
+            }
+
+            if (finalLat === null || isNaN(finalLat)) {
+                const fallbackLat = (targetShop as any).latitude || (targetShop as any).lat;
+                const fallbackLng = (targetShop as any).longitude || (targetShop as any).lng;
+                if (fallbackLat && fallbackLng) {
+                    finalLat = typeof fallbackLat === 'string' ? parseFloat(fallbackLat) : fallbackLat;
+                    finalLng = typeof fallbackLng === 'string' ? parseFloat(fallbackLng) : fallbackLng;
+                }
+            }
+
+            // 🚀 최종 도출된 좌표로 카메라 부드럽게 무빙 격발
+            if (finalLat && finalLng && !isNaN(finalLat) && !isNaN(finalLng)) {
+                const moveLocation = new window.kakao.maps.LatLng(finalLat, finalLng);
+                console.log(`🚀 [인덱스 저격 무빙] 지도를 '${targetShop.name}' 매장으로 워프합니다.`);
+                map.panTo(moveLocation);
+            }
         }
-    }, [selectedId, restaurants]);
+    }, [selectedIndex, restaurants]);
 
     return (
         <div className="absolute inset-0 min-w-full min-h-full bg-gray-100 z-0">

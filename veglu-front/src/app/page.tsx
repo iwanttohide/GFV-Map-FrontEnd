@@ -5,6 +5,7 @@ import Header from '@/components/main/Header';
 import Sidebar from '@/components/main/Sidebar';
 import MapContainer from '@/components/main/MapContainer';
 import AuthModal from '@/components/auth/AuthModal';
+import RestaurantDetailSheet from '@/components/main/RestaurantDetailSheet';
 
 interface Restaurant {
     restaurantId: number;
@@ -189,18 +190,37 @@ export default function MainPage() {
                 </div>
             ) : (
                 /* 시나리오 B: 로그인 후 (본체 비건 지도 시스템) */
-                <div className="h-screen w-screen flex flex-col bg-white overflow-hidden select-none animate-in fade-in duration-500">
+                <div className="h-screen w-screen flex flex-col bg-white overflow-hidden">
                     <Header onLogout={handleLogout} onFilterChange={handleHeaderFilter} />
 
-                    <div className="relative w-full h-[calc(100vh-64px)] overflow-hidden">
-                        <MapContainer restaurants={restaurants} selectedIndex={selectedShopIndex} />
+                    {/* 메인 작업 대지 뷰포트 크기 강제 홀딩 */}
+                    <div className="relative w-full h-[calc(100vh-64px)] flex overflow-hidden">
 
-                        <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10">
+                        {/* 1. 왼쪽 구역: 사이드바 독립 배치 (자체 레이아웃 및 마운트 독립) */}
+                        <div className="h-full z-10 flex-shrink-0">
                             <Sidebar
                                 restaurants={restaurants}
                                 selectedIndex={selectedShopIndex}
-                                onShopSelect={(index) => setSelectedShopIndex(index)} // 클릭 시 식당의 '배열 순번'을 부모에게 전달
+                                onShopSelect={(index) => setSelectedShopIndex(index)}
                             />
+                        </div>
+
+                        {/* 2. 오른쪽 구역: 지도 본체 및 바텀시트가 머무를 전용 무대 설정 */}
+                        <div className="relative flex-1 h-full overflow-hidden">
+
+                            {/* 카카오 지도 레이어 */}
+                            <MapContainer
+                                restaurants={restaurants}
+                                selectedIndex={selectedShopIndex}
+                            />
+
+                            {/* 🎯 [신규 장착] 와이어프레임 기획안의 실물 바텀시트 패널 주입! */}
+                            {/* selectedShopIndex가 null이 아닐 때만 슥 올라오며, 지도의 최하단을 살짝 덮어 가립니다. */}
+                            <RestaurantDetailSheet
+                                restaurant={selectedShopIndex !== null ? restaurants[selectedShopIndex] : null}
+                                onClose={() => setSelectedShopIndex(null)} // ✕를 누르면 깔끔하게 초점 상태 초기화
+                            />
+
                         </div>
                     </div>
                 </div>

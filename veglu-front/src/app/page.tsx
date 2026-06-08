@@ -35,7 +35,6 @@ export default function MainPage() {
         const currentCategory = filterData.searchCategory; // 'region', 'store', 'menu'
         const currentKeyword = (filterData.keyword || '').trim(); // 공백 제거
 
-        // 🎯 [프론트 우회 락 해제 1] 검색어가 비어있다면 백엔드에 찌르지 않고 원본 백업본을 그대로 복구합니다!
         if (currentKeyword === '') {
             console.log("💡 검색어가 비어있어 백엔드 요청을 생략하고 프론트 원본 데이터로 복원합니다.");
             setRestaurants(allRestaurants);
@@ -75,9 +74,6 @@ export default function MainPage() {
         }
     };
 
-    // ──────────────────────────────────────────────────────────
-    // 🎯 [우회 핵심] 처음 화면이 켜질 때 DB에 존재하는 데이터를 '확실한 키워드'로 강제 수집
-    // ──────────────────────────────────────────────────────────
     const fetchInitialRestaurants = async () => {
         try {
             const accessToken = localStorage.getItem('accessToken');

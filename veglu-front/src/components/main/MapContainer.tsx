@@ -25,7 +25,11 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
     const markersRef = useRef<any[]>([]);
 
     const initKakaoMap = () => {
-        if (mapInstance.current) return;
+        // 💡 [안전 가드] 이미 지도가 존재한다면 중복 생성을 막고 마커만 새로 그립니다.
+        if (mapInstance.current) {
+            drawMapMarkers();
+            return;
+        }
         if (!mapContainerRef.current) return;
 
         const container = mapContainerRef.current;
@@ -46,13 +50,11 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
         drawMapMarkers();
     };
 
-    // 🎯 마커 드로잉 엔진 (파싱 규격 및 필터 안전벨트 강화)
     const drawMapMarkers = () => {
         const map = mapInstance.current;
         const clusterer = clustererInstance.current;
         if (!map || !clusterer) return;
 
-        // 1. 잔상 초기화
         clusterer.clear();
         if (markersRef.current && markersRef.current.length > 0) {
             markersRef.current.forEach(marker => {
@@ -61,7 +63,6 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
         }
         markersRef.current = [];
 
-        // 2. 다이렉트 타깃 인덱스 매핑 바인딩 (유실 방어선 구축)
         let targets: any[] = [];
         if (selectedIndex !== null && restaurants[selectedIndex]) {
             targets = [{ ...restaurants[selectedIndex], _originalIndex: selectedIndex }];
@@ -69,15 +70,12 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
             targets = restaurants.map((r, i) => ({ ...r, _originalIndex: i }));
         }
 
-        console.log(`📍 [마커 렌더 엔진] 계산된 타깃 개수: ${targets.length}개`);
-
         const newMarkers = targets.map((shop: any) => {
             if (!shop) return null;
 
             let finalLat: number | null = null;
             let finalLng: number | null = null;
 
-            // 주동선 A: "위도/경도" 슬래시 혹은 쉼표 파싱
             if (shop.points && typeof shop.points === 'string') {
                 const separator = shop.points.includes('/') ? '/' : (shop.points.includes(',') ? ',' : null);
                 if (separator) {
@@ -87,7 +85,6 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
                 }
             }
 
-            // 주동선 B: points 유실 시 백엔드 단독 위경도 필드 역추적 가드
             if (finalLat === null || isNaN(finalLat)) {
                 const fallbackLat = shop.latitude || shop.lat;
                 const fallbackLng = shop.longitude || shop.lng;
@@ -97,7 +94,6 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
                 }
             }
 
-            // 🚀 최종 도출된 정상 위경도 좌표로 카카오 마커 낙하 격발
             if (finalLat && finalLng && !isNaN(finalLat) && !isNaN(finalLng)) {
                 const markerPosition = new window.kakao.maps.LatLng(finalLat, finalLng);
 
@@ -107,7 +103,6 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
                     map: map
                 });
 
-                // 🎯 마커 직접 클릭 시 상세창 연동 링커 가동
                 window.kakao.maps.event.addListener(marker, 'click', () => {
                     if (typeof onMarkerSelect === 'function') {
                         onMarkerSelect(shop._originalIndex);
@@ -116,15 +111,22 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
 
                 return marker;
             }
-
             return null;
         }).filter(m => m !== null) as any[];
 
-        // 3. 클러스터러 최종 적재
         markersRef.current = newMarkers;
         clusterer.addMarkers(newMarkers);
-        console.log(`✅ [지도 마킹 완수] 정상 노출된 핀 마커 총 개수: ${newMarkers.length}개`);
     };
+
+    useEffect(() => {
+        // 마이페이지에서 뒤로가기나 링크로 돌아왔을 때 이미 브라우저 전역 메모리에 kakao API가 로드되어 있다면
+        if (typeof window !== 'undefined' && window.kakao && window.kakao.maps) {
+            console.log("🔄 [인프라 재부팅] 다른 페이지에서 복귀가 감지되어 카카오맵 엔진을 즉시 리프레시 부팅합니다.");
+            window.kakao.maps.load(() => {
+                initKakaoMap();
+            });
+        }
+    }, []);
 
     useEffect(() => {
         if (mapInstance.current) {
@@ -175,6 +177,7 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
                 src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=604e9a64453d6167f7a58e8231871b49&autoload=false&libraries=clusterer"
                 strategy="afterInteractive"
                 onLoad={() => {
+                    // 최초 사이트 접속 시 깨어나는 통로
                     if (window.kakao && window.kakao.maps) {
                         window.kakao.maps.load(initKakaoMap);
                     }

@@ -219,7 +219,6 @@ export default function MainPage() {
                                 onMarkerSelect={(index) => setSelectedShopIndex(index)}
                             />
 
-                            {/* 🎯 [신규 장착] 와이어프레임 기획안의 실물 바텀시트 패널 주입! */}
                             {/* selectedShopIndex가 null이 아닐 때만 슥 올라오며, 지도의 최하단을 살짝 덮어 가립니다. */}
                             <RestaurantDetailSheet
                                 restaurant={selectedShopIndex !== null ? restaurants[selectedShopIndex] : null}

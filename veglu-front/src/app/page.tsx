@@ -104,6 +104,16 @@ export default function MainPage() {
 
     // 새로고침 시 자동 토큰 검증 및 재발급 레이어 (기존 로직 100% 유지)
     useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const email = urlParams.get('email'); // ◀ 구글이 준 진짜 이메일 수거
+
+        if (token && email) {
+            localStorage.setItem('accessToken', token);
+            localStorage.setItem('user_email', email); // ◀ 금고 적재 끝!
+            window.location.href = '/'; // 주소창 지우고 로그인 완료!
+        }
+
         const checkAuthAndRefresh = async () => {
             const accessToken = localStorage.getItem('accessToken');
             const refreshToken = localStorage.getItem('refreshToken');

@@ -3,49 +3,6 @@
 import React from 'react';
 
 export default function SocialLogin() {
-
-    const handleSocialRedirect = (provider: 'kakao' | 'naver' | 'google') => {
-        const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-<<<<<<< Updated upstream
-        if (provider === 'kakao') {
-            const KAKAO_CLIENT_ID = '5cbb4b90ecb89c2feefea4ade7ed1db0';
-            const KAKAO_REDIRECT_URI = 'http://192.168.7.120:5000/auth/kakao/callback';
-
-            redirectUrl = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${KAKAO_CLIENT_ID}&redirect_uri=${encodeURIComponent(KAKAO_REDIRECT_URI)}`;
-        }
-
-        else if (provider === 'naver') {
-            const NAVER_CLIENT_ID = 'k5TSkkHC8gIfT9M15ECc';
-            const NAVER_REDIRECT_URI = 'http://192.168.7.120:5000/auth/naver/callback';
-            const STATE = 'vegan_gf_map_state';
-
-            redirectUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${NAVER_CLIENT_ID}&redirect_uri=${encodeURIComponent(NAVER_REDIRECT_URI)}&state=${STATE}`;
-        }
-
-        else if (provider === 'google') {
-            const GOOGLE_CLIENT_ID = '332714059523-bh6db7jsaabpmf6fvvtahjal0fhfqa5u.apps.googleusercontent.com';
-            // 목적지를 내 Next.js 콜백 페이지로 변경!
-            const GOOGLE_REDIRECT_URI = 'http://localhost:3000/auth/google/callback';
-            const SCOPE = 'email profile';
-
-            redirectUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&scope=${encodeURIComponent(SCOPE)}`;
-        }
-
-        // 안전하게 조립된 소셜 동의창 주소로 즉시 이동
-        if (redirectUrl) {
-            window.location.href = redirectUrl;
-        }
-=======
-        // 보통 Spring Security OAuth2 표준 주소는 /oauth2/authorization/{provider} 입니다.
-        const redirectUrl = `${BACKEND_BASE_URL}/oauth2/authorization/${provider}`;
-
-        console.log(`🚀 [소셜 로그인 토스] 목적지 백엔드 서버 ➔ ${redirectUrl}`);
-
-        window.location.href = redirectUrl;
->>>>>>> Stashed changes
-    };
-
     return (
         <div>
             <div className="relative my-5 text-center">
@@ -56,27 +13,31 @@ export default function SocialLogin() {
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-                <button
-                    type="button"
-                    onClick={() => handleSocialRedirect('kakao')}
-                    className="flex items-center justify-center py-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-xs font-medium transition-colors"
+                {/* 🟡 카카오 관문
+                  - 백엔드가 완성되면 카카오가 준 인가코드(code)를 들고 프론트 대기실로 귀환합니다.
+                */}
+                <a
+                    href={`https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=5cbb4b90ecb89c2feefea4ade7ed1db0&redirect_uri=${encodeURIComponent('http://192.168.7.120:5000/auth/kakao/callback')}`}
+                    className="flex items-center justify-center py-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-xs font-medium transition-colors text-center text-gray-700"
                 >
                     카카오
-                </button>
-                <button
-                    type="button"
-                    onClick={() => handleSocialRedirect('naver')}
-                    className="flex items-center justify-center py-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-xs font-medium transition-colors"
+                </a>
+
+                {/* 🟢 네이버 관문 */}
+                <a
+                    href={`https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=k5TSkkHC8gIfT9M15ECc&redirect_uri=${encodeURIComponent('http://localhost:3000/auth/naver/callback')}&state=vegan_gf_map_state`}
+                    className="flex items-center justify-center py-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-xs font-medium transition-colors text-center text-gray-700"
                 >
                     네이버
-                </button>
-                <button
-                    type="button"
-                    onClick={() => handleSocialRedirect('google')}
-                    className="flex items-center justify-center py-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-xs font-medium transition-colors"
+                </a>
+
+                {/* 🔵 구글 관문 */}
+                <a
+                    href={`https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=332714059523-bh6db7jsaabpmf6fvvtahjal0fhfqa5u.apps.googleusercontent.com&redirect_uri=${encodeURIComponent('http://localhost:3000/auth/google/callback')}&scope=${encodeURIComponent('email profile')}`}
+                    className="flex items-center justify-center py-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-xs font-medium transition-colors text-center text-gray-700"
                 >
                     구글
-                </button>
+                </a>
             </div>
         </div>
     );

@@ -21,9 +21,6 @@ export default function MainPage() {
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-    // ──────────────────────────────────────────────────────────
-    // 💡 [우회 핵심] 백엔드 버그 방어를 위한 원본 보관소 분리 선언
-    // ──────────────────────────────────────────────────────────
     const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([]); // 전체 데이터 백업본
     const [restaurants, setRestaurants] = useState<Restaurant[]>([]);    // 화면(지도/사이드바)에 뿌려질 최종본
     const [selectedShopIndex, setSelectedShopIndex] = useState<number | null>(null);
@@ -196,7 +193,14 @@ export default function MainPage() {
                     {/* 메인 작업 대지 뷰포트 크기 강제 홀딩 */}
                     <div className="relative w-full h-[calc(100vh-64px)] flex overflow-hidden">
 
-                        {/* 1. 왼쪽 구역: 사이드바 독립 배치 (자체 레이아웃 및 마운트 독립) */}
+                        {/* 카카오 지도 레이어 */}
+                        <MapContainer
+                            restaurants={restaurants}
+                            selectedIndex={selectedShopIndex}
+                            onMarkerSelect={(index) => setSelectedShopIndex(index)}
+                        />
+
+                        {/* 왼쪽 구역: 사이드바 독립 배치 (자체 레이아웃 및 마운트 독립) */}
                         <div className="h-full z-10 flex-shrink-0">
                             <Sidebar
                                 restaurants={restaurants}
@@ -205,15 +209,8 @@ export default function MainPage() {
                             />
                         </div>
 
-                        {/* 2. 오른쪽 구역: 지도 본체 및 바텀시트가 머무를 전용 무대 설정 */}
+                        {/* 오른쪽 구역: 지도 본체 및 바텀시트가 머무를 전용 무대 설정 */}
                         <div className="relative flex-1 h-full overflow-hidden">
-
-                            {/* 카카오 지도 레이어 */}
-                            <MapContainer
-                                restaurants={restaurants}
-                                selectedIndex={selectedShopIndex}
-                                onMarkerSelect={(index) => setSelectedShopIndex(index)}
-                            />
 
                             {/* selectedShopIndex가 null이 아닐 때만 슥 올라오며, 지도의 최하단을 살짝 덮어 가립니다. */}
                             <RestaurantDetailSheet

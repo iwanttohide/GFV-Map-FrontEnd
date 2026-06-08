@@ -14,8 +14,8 @@ interface Restaurant {
 
 interface SidebarProps {
     restaurants: Restaurant[];
-    selectedIndex: number | null; // 💡 id 대신 index 수입
-    onShopSelect: (index: number) => void; // 💡 index 슛
+    selectedIndex: number | null;
+    onShopSelect: (index: number) => void;
 }
 
 export default function Sidebar({ restaurants, selectedIndex, onShopSelect }: SidebarProps) {
@@ -30,23 +30,35 @@ export default function Sidebar({ restaurants, selectedIndex, onShopSelect }: Si
     });
 
     return (
-        <div className="relative flex h-full z-10 pointer-events-none">
-            <div className={`bg-white border-r border-gray-200 h-full flex flex-col transition-all duration-300 pointer-events-auto ${isOpen ? 'w-[360px]' : 'w-0 overflow-hidden border-r-0'}`}>
+        /* 🎯 [전체 오버레이 컨테이너]
+           사이드바 본체와 토글 버튼이 한 가족처럼 묶여서 이동하도록 absolute 레이어를 고수합니다.
+        */
+        <div className="absolute inset-y-0 left-0 flex h-full z-10 pointer-events-none">
 
-                <div className="p-4 border-b border-gray-100">
+            {/* 🎯 [사이드바 메인 패널]
+                w-[360px] 고정 크기에서 열고 닫힐 때 'transform duration-300' 애니메이션을 탑재합니다.
+            */}
+            <div
+                className={`bg-white border-r border-gray-200 h-full flex flex-col transition-all duration-300 pointer-events-auto shadow-2xl flex-shrink-0 ${
+                    isOpen
+                        ? 'w-[360px] translate-x-0'
+                        : 'w-[360px] -translate-x-full overflow-hidden border-r-0'
+                }`}
+            >
+                {/* 상단 정렬 바 */}
+                <div className="p-4 border-b border-gray-100 flex-shrink-0">
                     <select value={sortRule} onChange={(e) => setSortRule(e.target.value)} className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 focus:outline-none cursor-pointer">
                         <option value="distance">거리순 정렬 (F-SEARCH-003)</option>
                         <option value="rating">평점순 정렬</option>
                     </select>
                 </div>
 
+                {/* 식당 카드 리스트 영역 */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {processedList.map((shop, index) => (
                         <div
                             key={`sidebar-shop-${shop.restaurantId}-${index}`}
-                            // 🎯 [교정] shop.restaurantId 대신 순수한 내 배열 번호 index를 위로 쏩니다!
                             onClick={() => onShopSelect(index)}
-                            // 🎯 [교정] 0 === 0 함정을 파괴하고 내 칸만 정확히 초록 불이 켜지게 차단!
                             className={`p-4 border rounded-2xl bg-white transition-all cursor-pointer hover:border-green-600 hover:shadow-sm ${
                                 selectedIndex === index
                                     ? 'border-green-600 ring-2 ring-green-600/10 bg-green-50/20'
@@ -74,8 +86,24 @@ export default function Sidebar({ restaurants, selectedIndex, onShopSelect }: Si
                 </div>
             </div>
 
-            <div className="flex items-center h-full pointer-events-auto">
-                <button onClick={() => setIsOpen(!isOpen)} className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 p-2 rounded-r-xl shadow-md transition-all -ml-[1px]">
+            {/* 🎯 [대혁명 구역: 접기/펴기 토글 버튼 트랙커]
+              기존에 버튼 레이어가 혼자 공중에 굳어있던 버그를 격파합니다!
+              사이드바 본체의 이동 명령줄인 `isOpen` 스위치 상태를 고스란히 공유받아서,
+              사이드바가 닫힐 때 본체 꼬리에 딱 달라붙어 'transition-all duration-300' 모션과 함께
+              좌측 벽으로 `-translate-x-[360px]` 동시 순간이동 슬라이딩을 수행합니다!
+            */}
+            <div
+                className={`flex items-center h-full pointer-events-auto flex-shrink-0 transition-all duration-300 ease-out ${
+                    isOpen
+                        ? 'transform translate-x-0'
+                        : 'transform -translate-x-[360px]' // 💡 본체가 숨은 거리만큼 바짝 쫓아갑니다!
+                }`}
+            >
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="bg-white border border-gray-200 border-l-0 hover:bg-gray-50 text-gray-600 p-2 rounded-r-xl shadow-md transition-all -ml-[1px] h-14 flex items-center justify-center font-bold text-sm z-30"
+                    title={isOpen ? '사이드바 접기' : '사이드바 열기'}
+                >
                     {isOpen ? '◀' : '▶'}
                 </button>
             </div>

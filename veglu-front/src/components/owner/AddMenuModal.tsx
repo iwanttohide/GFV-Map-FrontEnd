@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import { Menu } from '@/components/owner/MenuCard';
+import { createMenu } from '@/libs/api/restaurant';
 
 export default function AddMenuModal({
                                          onClose,
                                          onAdd,
+                                         restaurantId,
                                      }: {
     onClose: () => void;
     onAdd: (menu: Menu) => void;
+    restaurantId: number;
 }) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -22,15 +25,27 @@ export default function AddMenuModal({
         setPhotoPreview(URL.createObjectURL(file));
     }
 
-    function handleAdd() {
+    async function handleAdd() {
         if (!name.trim()) return;
-        onAdd({
-            id: String(Date.now()),
-            name,
-            description,
-            thumbnail: photoPreview || 'https://via.placeholder.com/150',
-        });
-        onClose();
+        try {
+            const created = await createMenu({
+                restaurantId,
+                name,
+                description,
+                imageUrl: photoPreview || undefined,
+            });
+
+            onAdd({
+                id: String(created.menuId),  // id → menuId 로 수정
+                restaurantId,
+                name: created.name,
+                description: created.description ?? '',
+                thumbnail: created.imageUrl ?? photoPreview ?? '',
+            });
+            onClose();
+        } catch (e) {
+            console.error('메뉴 추가 실패', e);
+        }
     }
 
     return (

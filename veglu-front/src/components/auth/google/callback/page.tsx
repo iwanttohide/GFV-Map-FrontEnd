@@ -11,7 +11,7 @@ export default function GoogleCallback() {
         const code = searchParams.get('code');
         if (!code) return;
 
-        fetch('http://192.168.7.120:3000/auth/google/login', {
+        fetch('http://192.168.7.120:5000/auth/google/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code })

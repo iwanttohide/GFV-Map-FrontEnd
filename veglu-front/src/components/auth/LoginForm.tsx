@@ -30,7 +30,10 @@ export default function LoginForm({ setViewMode, onClose, onLoginSuccess }: Logi
         setIsLoading(true);
 
         try {
-            const response = await fetch('http://192.168.7.120:5000/auth/login', {
+            // 💡 하드코딩 주소 대신 방금 정비한 .env.local 금고에서 주소를 깨워옵니다.
+            const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
+
+            const response = await fetch(`${BACKEND_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -49,37 +52,49 @@ export default function LoginForm({ setViewMode, onClose, onLoginSuccess }: Logi
 
             const data = await response.json();
 
-            // ──────────────────────────────────────────────────────────
-            // 🔄 [완벽 복구] 누락되었던 user_email 금고 저장 장치 재조립
-            // ──────────────────────────────────────────────────────────
+            // 🛡️ 로그인 목적지 주소의 기본값은 메인 홈(지도)입니다.
+            let destinationPath = '/';
+
             if (data.accessToken) {
-                // 💡 [3중 멀티 안전 가드]
-                // 1. 백엔드가 최상단에 이메일을 주었을 때 (data.email)
-                // 2. 혹은 user 객체 안에 감싸 주었을 때 (data.user?.email)
-                // 3. 그것도 아니면 현재 유저가 이 인풋창에 직접 타이핑한 원본 상태값 (email)을 강제로 징집!
-                const finalSaveEmail = data.email || data.user?.email || email || 'veglu@domain.com';
-
-                // 🎯 제가 날려 먹었던 범인인 이메일 금고 보관 코드를 다시 굳건히 심어줍니다.
-                localStorage.setItem('user_email', finalSaveEmail);
-
+                // 1. 보안 인가 토큰 적재
                 localStorage.setItem('accessToken', data.accessToken);
                 if (data.refreshToken) {
                     localStorage.setItem('refreshToken', data.refreshToken);
                 }
 
+                // 2. 유저 이메일 및 프로필 메타 데이터 안전 복구 적재
+                const finalSaveEmail = data.email || data.user?.email || email || 'veglu@domain.com';
                 const finalNickname = data.nickname || data.user?.nickname || '익명유저';
                 const finalAvatar = data.profileImageUrl || data.user?.profileImageUrl || 'default';
 
+                localStorage.setItem('user_email', finalSaveEmail);
                 localStorage.setItem('user_nickname', finalNickname);
                 localStorage.setItem('user_avatar', finalAvatar);
+
+                const userRole = data.role || data.user?.role || 'USER';
+                localStorage.setItem('user_role', userRole); // 금고 보관
+
+                if (userRole === 'ADMIN') {
+                    console.log("👮 최고 관리자 로그인을 환영합니다. 관리자 통계실로 워프합니다.");
+                    destinationPath = '/admin/dashboard';
+                }
+                else if (userRole === 'OWNER') {
+                    console.log("👨‍🍳 사장님 계정 로그인을 환영합니다. 매장 관리 대시보드로 워프합니다.");
+                    destinationPath = '/owner/manage';
+                }
+                else {
+                    console.log("🌱 비건 안심 지도 일반 회원 로그인 성공. 지도를 오픈합니다.");
+                    destinationPath = '/';
+                }
+                // ──────────────────────────────────────────────────────────
             }
-            // ──────────────────────────────────────────────────────────
 
             if (onLoginSuccess) {
                 onLoginSuccess();
             }
 
-            window.location.href = '/';
+            // 단순 새로고침 강제 이동이 아닌, 권한별로 셋업된 목적지로 스무스하게 다이내믹 포워딩합니다.
+            window.location.href = destinationPath;
 
         } catch (err) {
             setError('서버 연결에 실패했습니다. 네트워크 상태를 확인해 주세요.');

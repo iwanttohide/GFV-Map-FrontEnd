@@ -5,8 +5,9 @@ import React from 'react';
 export default function SocialLogin() {
 
     const handleSocialRedirect = (provider: 'kakao' | 'naver' | 'google') => {
-        let redirectUrl = '';
+        const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+<<<<<<< Updated upstream
         if (provider === 'kakao') {
             const KAKAO_CLIENT_ID = '5cbb4b90ecb89c2feefea4ade7ed1db0';
             const KAKAO_REDIRECT_URI = 'http://192.168.7.120:5000/auth/kakao/callback';
@@ -35,6 +36,14 @@ export default function SocialLogin() {
         if (redirectUrl) {
             window.location.href = redirectUrl;
         }
+=======
+        // 보통 Spring Security OAuth2 표준 주소는 /oauth2/authorization/{provider} 입니다.
+        const redirectUrl = `${BACKEND_BASE_URL}/oauth2/authorization/${provider}`;
+
+        console.log(`🚀 [소셜 로그인 토스] 목적지 백엔드 서버 ➔ ${redirectUrl}`);
+
+        window.location.href = redirectUrl;
+>>>>>>> Stashed changes
     };
 
     return (

@@ -110,6 +110,13 @@ export default function MainPage() {
 
             if (!accessToken && !refreshToken) return;
 
+            if (accessToken?.startsWith('mock_')) {
+                console.log("⚠️ [테스트 오버라이딩] 가짜 토큰을 감지했습니다. 백엔드 갱신 요청을 생략하고 프리패스 지도를 오픈합니다.");
+                setIsLoggedIn(true);
+                fetchInitialRestaurants(); //
+                return;
+            }
+
             try {
                 const response = await fetch('http://192.168.7.120:5000/auth/refresh', {
                     method: 'POST',

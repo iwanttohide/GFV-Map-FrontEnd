@@ -39,9 +39,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const [shouldRender, setShouldRender] = useState(false);
     const [isAnimatingOut, setIsAnimatingOut] = useState(false);
 
-    // ──────────────────────────────────────────────────────────
-    // 🛡️ [에러 해결 마법의 열쇠] 팅김 버그 방어용 식당 데이터 마스터 캐시 락
-    // ──────────────────────────────────────────────────────────
     const cachedRestaurantRef = useRef<Restaurant | null>(null);
 
     // 부모로부터 받아온 알맹이가 유효할 때마다 금고 캐시에 박아둡니다.
@@ -120,7 +117,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                 isAnimatingOut ? 'transform translate-y-full opacity-0' : 'transform translate-y-0 opacity-100'
             }`}
         >
-            {/* 상단 레이아웃 명세 헤더 - 이제 currentViewShop 수선으로 유실 가드가 완벽히 적용되었습니다! */}
             <div className="flex items-start justify-between border-b border-gray-100 pb-3 flex-shrink-0">
                 <div className="flex items-center space-x-4 overflow-hidden">
                     <div className="w-14 h-14 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center flex-shrink-0 text-xl shadow-inner">🌱</div>

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react'; // 👈 useRef 추가
 
 export default function KakaoAuthCallbackPage() {
-    const [statusText, setStatusText] = useState('로그인 데이터를 처리 중입니다...');
+    const [statusText, setStatusText] = useState('소셜 인증 정보를 검증하고 있습니다...');
+    const hasCalled = useRef(false); // 👈 중복 호출 차단막 변수 신설
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -14,47 +15,52 @@ export default function KakaoAuthCallbackPage() {
             return;
         }
 
+        if (hasCalled.current) return;
+
         const handleLogin = async () => {
+            hasCalled.current = true;
+
             try {
                 const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
 
-                // 1. 백엔드에 코드 전달
                 const response = await fetch(`${BACKEND_URL}/auth/kakao/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code: code })
                 });
 
-                if (!response.ok) throw new Error('로그인 실패');
+                if (!response.ok) {
+                    const errorMsg = await response.text();
+                    throw new Error(`서버 거부 (${response.status}): ${errorMsg}`);
+                }
 
-                // 2. 백엔드에서 반환한 JSON 데이터 수신
                 const data = await response.json();
-                console.log("백엔드 응답 데이터:", data);
 
-                // 3. 토큰 및 유저 정보 저장 (중요!)
                 if (data.accessToken) {
                     localStorage.setItem('accessToken', data.accessToken);
                     if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+                    localStorage.setItem('user_email', data.email || '');
+                    localStorage.setItem('user_nickname', data.nickname || '소셜유저');
+                    localStorage.setItem('user_avatar', data.profileImageUrl || 'default');
+                    localStorage.setItem('user_role', data.role || 'USER');
 
-                    // 유저 정보 저장 (백엔드 TokenResponseDto 구조에 맞춤)
-                    localStorage.setItem('user_email', data.email);
-                    localStorage.setItem('user_nickname', data.nickname);
-
-                    setStatusText('로그인 성공! 메인으로 이동합니다.');
-
-                    // 4. 메인 페이지로 이동
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 500);
+                    setStatusText('🎉 인증 성공! 비건 안심 지도로 진입합니다.');
+                    setTimeout(() => { window.location.href = '/'; }, 500);
                 }
             } catch (err) {
-                setStatusText('로그인 처리 중 오류 발생');
-                setTimeout(() => window.location.href = '/', 2000);
+                console.error("🚨 소셜 세션 연동 최종 실패:", err);
+                setStatusText('⚠️ 인증 세션 만료 또는 중복 요청 발생. 다시 시도해 주세요.');
+                setTimeout(() => { window.location.href = '/'; }, 2500);
             }
         };
 
         handleLogin();
     }, []);
 
-    return <div>{statusText}</div>;
+    return (
+        <div className="min-h-screen w-screen bg-white flex flex-col items-center justify-center text-xs font-bold text-green-700 select-none">
+            <div className="text-3xl mb-3 animate-spin duration-1000">🌱</div>
+            <p className="tracking-tight text-gray-500 animate-pulse">{statusText}</p>
+        </div>
+    );
 }

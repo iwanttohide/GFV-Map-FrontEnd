@@ -28,7 +28,7 @@ interface MenuSpec {
 // 🎯 백엔드 실제 Response JSON 바디 명세 규격 일치화
 interface ReviewItem {
     reviewId?: number;
-    restaurantId: number;   // 👈 백엔드가 준 오리지널 스펙인 카멜케이스 일치화
+    restaurantId: number;
     rating: number;
     content: string;
     photos?: string[];
@@ -56,9 +56,58 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const [shouldRender, setShouldRender] = useState(false);
     const [isAnimatingOut, setIsAnimatingOut] = useState(false);
 
-    // 🛡️ 독립 로컬 고정 정수 메모리
     const [stableRestaurantId, setStableRestaurantId] = useState<number>(0);
     const cachedRestaurantRef = useRef<Restaurant | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || stableRestaurantId === 0) return;
+
+        try {
+            const accessToken = localStorage.getItem('accessToken');
+            const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
+
+            // 1. S3 업로드 (FormData)
+            const fd = new FormData();
+            fd.append('file', file);
+
+            const upRes = await fetch(`${BACKEND_URL}/photo/upload`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${accessToken}` }, // FormData는 Content-Type 자동 설정
+                body: fd,
+            });
+
+            if (!upRes.ok) throw new Error("S3 업로드 실패");
+            const { url } = await upRes.json();
+
+            // 2. DB 사진 등록
+            const dbRes = await fetch(`${BACKEND_URL}/photo`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    url: url,
+                    type: 'RESTAURANT',
+                    restaurantId: stableRestaurantId,
+                    menuId: null,
+                    caption: "식당 사진",
+                    isMain: false
+                }),
+            });
+
+            if (dbRes.ok) {
+                alert("사진이 등록되었습니다!");
+                // 등록 후 리뷰나 사진 탭 새로고침
+                if (activeTab === 'PHOTO') fetchRestaurantReviews(stableRestaurantId);
+            }
+        } catch (err) {
+            console.error("사진 업로드 프로세스 에러:", err);
+            alert("사진 업로드 중 문제가 발생했습니다.");
+        }
+    };
 
     // 🎯 부모 프롭스의 생명주기 락 엔진
     useEffect(() => {
@@ -349,7 +398,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                     </div>
                 )}
 
-                {/* [REVIEW] - 🛠️ Page 데이터 매핑 맞춤형 렌더링 리팩터링 */}
                 {activeTab === 'REVIEW' && (
                     <div className="space-y-4 animate-in fade-in duration-200">
 
@@ -387,8 +435,30 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                     <input type="text" placeholder="예: 비건 토마토 파스타" value={writeRecMenu} onChange={(e) => setWriteRecMenu(e.target.value)} className="w-full border p-1.5 rounded-lg bg-gray-50 text-xs font-medium focus:outline-none" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="font-bold text-gray-500 block">📸 사진 이미지 URL (선택)</label>
-                                    <input type="url" placeholder="https://images.unsplash.com/..." value={writePhotoUrl} onChange={(e) => setWritePhotoUrl(e.target.value)} className="w-full border p-1.5 rounded-lg bg-gray-50 text-xs font-medium focus:outline-none" />
+                                    <label className="font-bold text-[11px] text-gray-500 block">📸 사진 첨부 (파일 또는 URL)</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="사진 URL을 붙여넣거나 아래 버튼으로 업로드"
+                                            value={writePhotoUrl}
+                                            onChange={(e) => setWritePhotoUrl(e.target.value)}
+                                            className="flex-1 border p-1.5 rounded-lg bg-gray-50 text-xs font-medium focus:outline-none"
+                                        />
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleFileChange}
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-[10px] rounded-lg transition-all"
+                                        >
+                                            파일 선택
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -403,8 +473,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                 </button>
                             </div>
                         </div>
-
-                        <hr className="border-gray-200/60 my-2" />
 
                         {/* 리뷰 피드 리스트 출력부 */}
                         <p className="font-bold text-gray-800 text-sm text-left">💬 방문자 안심 평판 피드 ({reviews.length})</p>

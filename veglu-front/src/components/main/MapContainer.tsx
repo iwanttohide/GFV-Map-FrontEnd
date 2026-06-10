@@ -4,7 +4,8 @@ import React, { useEffect, useRef } from 'react';
 import Script from 'next/script';
 
 interface Restaurant {
-    restaurantId: number;
+    // restaurantId: number;
+    restaurant_id: number;
     name: string;
     address: string;
     points: string;
@@ -14,18 +15,21 @@ interface Restaurant {
 
 interface MapContainerProps {
     restaurants: Restaurant[];
-    selectedIndex: number | null;
-    onMarkerSelect: (index: number) => void;
+    // selectedIndex: number | null;
+    // onMarkerSelect: (index: number) => void;
+    selectedId: number | null; // 👈 selectedIndex 대신 고유 번호 수입
+    // onMarkerSelect: (restaurantId: number) => void; // 👈 마커 선택 시 고유 ID 방출 명세 변경
+    onMarkerSelect: (restaurant_id: number) => void;
 }
 
-export default function MapContainer({ restaurants, selectedIndex, onMarkerSelect }: MapContainerProps) {
+
+export default function MapContainer({ restaurants, selectedId, onMarkerSelect }: MapContainerProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<any>(null);
     const clustererInstance = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
 
     const initKakaoMap = () => {
-        // 💡 [안전 가드] 이미 지도가 존재한다면 중복 생성을 막고 마커만 새로 그립니다.
         if (mapInstance.current) {
             drawMapMarkers();
             return;
@@ -63,14 +67,17 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
         }
         markersRef.current = [];
 
-        let targets: any[] = [];
-        if (selectedIndex !== null && restaurants[selectedIndex]) {
-            targets = [{ ...restaurants[selectedIndex], _originalIndex: selectedIndex }];
+        let targets: Restaurant[] = [];
+        if (selectedId !== null) {
+            // const foundShop = restaurants.find(r => r.restaurantId === selectedId);
+            const foundShop = restaurants.find(r => r.restaurant_id === selectedId);
+            targets = foundShop ? [foundShop] : restaurants;
+
         } else {
-            targets = restaurants.map((r, i) => ({ ...r, _originalIndex: i }));
+            targets = restaurants;
         }
 
-        const newMarkers = targets.map((shop: any) => {
+        const newMarkers = targets.map((shop: Restaurant) => {
             if (!shop) return null;
 
             let finalLat: number | null = null;
@@ -86,8 +93,8 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
             }
 
             if (finalLat === null || isNaN(finalLat)) {
-                const fallbackLat = shop.latitude || shop.lat;
-                const fallbackLng = shop.longitude || shop.lng;
+                const fallbackLat = (shop as any).latitude || (shop as any).lat;
+                const fallbackLng = (shop as any).longitude || (shop as any).lng;
                 if (fallbackLat && fallbackLng) {
                     finalLat = typeof fallbackLat === 'string' ? parseFloat(fallbackLat) : fallbackLat;
                     finalLng = typeof fallbackLng === 'string' ? parseFloat(fallbackLng) : fallbackLng;
@@ -103,14 +110,23 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
                     map: map
                 });
 
+                // window.kakao.maps.event.addListener(marker, 'click', () => {
+                //     if (typeof onMarkerSelect === 'function') {
+                //         onMarkerSelect(shop._originalIndex);
+                //     }
+                // });
+
                 window.kakao.maps.event.addListener(marker, 'click', () => {
+                    console.log("📍 [클릭 감지] 마커 클릭됨! 식당 객체 데이터:", shop); // 👈 클릭 시 무조건 출력
                     if (typeof onMarkerSelect === 'function') {
-                        onMarkerSelect(shop._originalIndex);
+                        // onMarkerSelect(shop.restaurantId); // 👈 고유 번호 직접 발사!
+                        onMarkerSelect(shop.restaurant_id); // 👈 고유 번호 직접 발사!
                     }
                 });
 
                 return marker;
             }
+
             return null;
         }).filter(m => m !== null) as any[];
 
@@ -132,14 +148,15 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
         if (mapInstance.current) {
             drawMapMarkers();
         }
-    }, [restaurants, selectedIndex]);
+    }, [restaurants, selectedId]);
 
     // 사이드바나 마커 초점 변경 시 부드럽게 카메라 슬라이딩 시키는 훅
     useEffect(() => {
         const map = mapInstance.current;
-        if (!map || selectedIndex === null) return;
+        if (!map || selectedId === null) return;
 
-        const targetShop = restaurants[selectedIndex];
+        // const targetShop = restaurants.find(r => r.restaurantId === selectedId);
+        const targetShop = restaurants.find(r => r.restaurant_id === selectedId);
         if (targetShop) {
             let finalLat: number | null = null;
             let finalLng: number | null = null;
@@ -169,7 +186,7 @@ export default function MapContainer({ restaurants, selectedIndex, onMarkerSelec
                 }, 50);
             }
         }
-    }, [selectedIndex]);
+    }, [selectedId]);
 
     return (
         <div className="relative w-full h-full bg-gray-100 z-0">

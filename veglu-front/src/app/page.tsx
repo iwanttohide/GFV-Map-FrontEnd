@@ -8,7 +8,8 @@ import AuthModal from '@/components/auth/AuthModal';
 import RestaurantDetailSheet from '@/components/main/RestaurantDetailSheet';
 
 interface Restaurant {
-    restaurantId: number;
+    // restaurantId: number;
+    restaurant_id: number;
     name: string;
     address: string;
     points: string;
@@ -23,7 +24,8 @@ export default function MainPage() {
 
     const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([]); // 전체 데이터 백업본
     const [restaurants, setRestaurants] = useState<Restaurant[]>([]);    // 화면(지도/사이드바)에 뿌려질 최종본
-    const [selectedShopIndex, setSelectedShopIndex] = useState<number | null>(null);
+    // const [selectedShopIndex, setSelectedShopIndex] = useState<number | null>(null);
+    const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     // 헤더에서 검색 확정 시 작동하는 비동기 통신 및 프론트 오버라이딩 엔진
@@ -36,7 +38,8 @@ export default function MainPage() {
         if (currentKeyword === '') {
             console.log("💡 검색어가 비어있어 백엔드 요청을 생략하고 프론트 원본 데이터로 복원합니다.");
             setRestaurants(allRestaurants);
-            setSelectedShopIndex(null); // ◀ 오타 교정 완료! (Id -> Index)
+            // setSelectedShopIndex(null); // ◀ 오타 교정 완료! (Id -> Index)
+            setSelectedRestaurantId(null);
             return;
         }
 
@@ -65,8 +68,10 @@ export default function MainPage() {
                 const data = await response.json();
                 const sanitizedData = Array.isArray(data) ? data : [];
                 setRestaurants(sanitizedData);
-                setSelectedShopIndex(null); // 리셋도 index 기준으로 변경
+                // setSelectedShopIndex(null); // 리셋도 index 기준으로 변경
+                setSelectedRestaurantId(null);
             }
+
         } catch (err) {
             console.error("식당 검색 조회 에러:", err);
         }
@@ -177,8 +182,10 @@ export default function MainPage() {
             setIsLoggedIn(false);
             setRestaurants([]);
             setAllRestaurants([]);
-            setSelectedShopIndex(null); // 💡 로그아웃 시 선택 인덱스 깔끔하게 청소
+            // setSelectedShopIndex(null); // 💡 로그아웃 시 선택 인덱스 깔끔하게 청소
+            setSelectedRestaurantId(null);
         }
+
     };
 
     return (
@@ -214,24 +221,30 @@ export default function MainPage() {
                         {/* 1. 카카오 지도 레이어 (화면 전체 100% 가득 안착) */}
                         <MapContainer
                             restaurants={restaurants}
-                            selectedIndex={selectedShopIndex}
-                            onMarkerSelect={(index) => setSelectedShopIndex(index)}
+                            selectedId={selectedRestaurantId}
+                            onMarkerSelect={(id) => setSelectedRestaurantId(id)}
                         />
 
                         {/* 2. 공중부양 오버레이 사이드바 (z-10)
                    - 내부의 isOpen 스위치와 상태 세터를 부모 전역 센서인 isSidebarOpen 링크와 직결시킵니다. */}
                         <Sidebar
                             restaurants={restaurants}
-                            selectedIndex={selectedShopIndex}
-                            onShopSelect={(index) => setSelectedShopIndex(index)}
+                            selectedIndex={selectedRestaurantId}
+                            onShopSelect={(id) => setSelectedRestaurantId(id)}
                             isOpenProps={isSidebarOpen} // 💡 Sidebar.tsx 내부 useState(true) 대신 부모가 컨트롤하도록 전달 가능
                             onToggleSidebar={(open) => setIsSidebarOpen(open)} // 💡 토글 알림방
                         />
 
+                        {/*<RestaurantDetailSheet*/}
+                        {/*    restaurant={selectedRestaurantId !== null ? restaurants.find(r => r.restaurant_id === selectedRestaurantId) || null : null}*/}
+                        {/*    onClose={() => setSelectedRestaurantId(null)}*/}
+                        {/*    isSidebarOpen={isSidebarOpen} // 💡 링커 결속 완료!*/}
+                        {/*/>*/}
+
                         <RestaurantDetailSheet
-                            restaurant={selectedShopIndex !== null ? restaurants[selectedShopIndex] : null}
-                            onClose={() => setSelectedShopIndex(null)}
-                            isSidebarOpen={isSidebarOpen} // 💡 링커 결속 완료!
+                            restaurant={selectedRestaurantId !== null ? (restaurants.find(r => r.restaurant_id === selectedRestaurantId) || null) : null}
+                            onClose={() => setSelectedRestaurantId(null)}
+                            isSidebarOpen={isSidebarOpen}
                         />
 
                     </div>

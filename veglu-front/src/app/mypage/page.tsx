@@ -6,7 +6,8 @@ import Link from 'next/link';
 // 🎯 백엔드 명세 기반 리뷰 데이터 타입 설계
 interface ReviewItem {
     reviewId?: number;        // 백엔드에서 내려줄 고유 번호
-    restaurantId: number;     // 필수
+    // restaurantId: number;     // 필수
+    restaurant_id: number;
     restaurantName?: string;   // UI 화면에 뿌려줄 식당 이름 (백엔드에 추가 요청 필요)
     rating: number;           // 필수 (1.0~5.0)
     content: string;          // 필수
@@ -197,7 +198,8 @@ export default function MyPage() {
                                 <div key={review.reviewId || index} className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2 text-left">
                                     <div className="flex justify-between items-center">
                                         <h4 className="text-xs font-bold text-gray-800 truncate max-w-[200px]">
-                                            {review.restaurantName || `안심 인증 식당 (ID: ${review.restaurantId})`}
+                                            {/*{review.restaurantName || `안심 인증 식당 (ID: ${review.restaurantId})`}*/}
+                                            {review.restaurantName || `안심 인증 식당 (ID: ${review.restaurant_id})`}
                                         </h4>
                                         <span className="text-[10px] text-gray-400 font-semibold">{review.visitDate || '방문일 미지정'}</span>
                                     </div>

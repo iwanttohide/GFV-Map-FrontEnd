@@ -15,20 +15,21 @@ interface Restaurant {
 interface MenuSpec {
     menuId: number;
     name: string;
-    price: number;
+    price?: number;
     description: string;
-    category: 'MAIN' | 'SIDE' | 'DRINK' | 'DESSERT';
-    veganType: 'VEGAN' | 'LACTO' | 'OVO' | 'LACTO_OVO' | 'PESCO';
-    allergens: string[];
+    category?: 'MAIN' | 'SIDE' | 'DRINK' | 'DESSERT';
+    veganType?: 'VEGAN' | 'LACTO' | 'OVO' | 'LACTO_OVO' | 'PESCO';
+    allergens?: string[];
     imageUrl: string;
     isSignature: boolean;
     isAvailable: boolean;
     isSeasonal: boolean;
 }
 
+// 🎯 백엔드 실제 Response JSON 바디 명세 규격 일치화
 interface ReviewItem {
     reviewId?: number;
-    restaurant_id: number;
+    restaurantId: number;
     rating: number;
     content: string;
     photos?: string[];
@@ -36,6 +37,10 @@ interface ReviewItem {
     companionCount?: number;
     recommendedMenu?: string;
     userNickname?: string;
+    userProfileImageUrl?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    userId?: number;
 }
 
 interface RestaurantDetailSheetProps {
@@ -54,9 +59,59 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
 
     const [stableRestaurantId, setStableRestaurantId] = useState<number>(0);
     const cachedRestaurantRef = useRef<Restaurant | null>(null);
-
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFavorited, setIsFavorited] = useState(false);
 
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || stableRestaurantId === 0) return;
+
+        try {
+            const accessToken = localStorage.getItem('accessToken');
+            const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
+
+            // 1. S3 업로드 (FormData)
+            const fd = new FormData();
+            fd.append('file', file);
+
+            const upRes = await fetch(`${BACKEND_URL}/photo/upload`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${accessToken}` }, // FormData는 Content-Type 자동 설정
+                body: fd,
+            });
+
+            if (!upRes.ok) throw new Error("S3 업로드 실패");
+            const { url } = await upRes.json();
+
+            // 2. DB 사진 등록
+            const dbRes = await fetch(`${BACKEND_URL}/photo`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    url: url,
+                    type: 'RESTAURANT',
+                    restaurantId: stableRestaurantId,
+                    menuId: null,
+                    caption: "식당 사진",
+                    isMain: false
+                }),
+            });
+
+            if (dbRes.ok) {
+                alert("사진이 등록되었습니다!");
+                // 등록 후 리뷰나 사진 탭 새로고침
+                if (activeTab === 'PHOTO') fetchRestaurantReviews(stableRestaurantId);
+            }
+        } catch (err) {
+            console.error("사진 업로드 프로세스 에러:", err);
+            alert("사진 업로드 중 문제가 발생했습니다.");
+        }
+    };
+
+    // 🎯 부모 프롭스의 생명주기 락 엔진
     useEffect(() => {
         if (restaurant) {
             cachedRestaurantRef.current = restaurant;
@@ -129,11 +184,11 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
 
     const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
 
-    const fetchRestaurantMenus = async (restaurantId: number) => {
+    const fetchRestaurantMenus = async (id: number) => {
         setIsMenuLoading(true);
         try {
             const accessToken = localStorage.getItem('accessToken');
-            const response = await fetch(`${BACKEND_URL}/restaurant/${restaurantId}/menus`, {
+            const response = await fetch(`${BACKEND_URL}/restaurant/${id}/menus`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -164,7 +219,16 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             });
             if (response.ok) {
                 const data = await response.json();
-                setReviews(Array.isArray(data) ? data : []);
+
+                // 🎯 [리팩터링 핵심] Spring Page 래핑 해제 가드 처리
+                // 백엔드가 준 데이터가 .content방을 갖고 있으면 그 안의 리스트를 추출하고, 아니면 이전 통용 배열 방식을 하이브리드로 백업 방어합니다.
+                if (data && data.content && Array.isArray(data.content)) {
+                    setReviews(data.content);
+                } else if (Array.isArray(data)) {
+                    setReviews(data);
+                } else {
+                    setReviews([]);
+                }
             }
         } catch (err) {
             console.error("리뷰 피드 조회 실패:", err);
@@ -190,8 +254,9 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             const accessToken = localStorage.getItem('accessToken');
             const todayStr = new Date().toISOString().split('T')[0];
 
+            // 전송 규격도 카멜케이스 restaurantId 규격과 완벽 동기화 처리
             const reviewBody = {
-                restaurant_id: stableRestaurantId,
+                restaurantId: stableRestaurantId,
                 rating: writeRating,
                 content: writeContent,
                 photos: writePhotoUrl.trim() ? [writePhotoUrl.trim()] : [],
@@ -343,19 +408,25 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                 <div key={item.menuId} className="bg-white p-4 border border-gray-200 rounded-2xl flex space-x-3 shadow-sm hover:border-green-500 transition-all relative overflow-hidden">
                                     {item.isSignature && <div className="absolute top-0 left-0 bg-amber-500 text-white text-[8px] font-black px-2 py-0.5 rounded-br-lg uppercase tracking-tighter">RECOMMEND</div>}
                                     <div className="w-16 h-16 bg-gray-100 rounded-xl flex-shrink-0 border overflow-hidden flex items-center justify-center text-xs text-gray-400">
-                                        {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" /> : 'NO IMG'}
+                                        {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" /> : '🌱'}
                                     </div>
                                     <div className="space-y-1 w-full overflow-hidden">
                                         <div className="flex items-center justify-between">
-                                            <h4 className="font-bold text-gray-900 text-xs truncate max-w-[140px]">{item.name}</h4>
-                                            <span className="text-[10px] font-black text-green-700">{item.price.toLocaleString()}원</span>
+                                            <h4 className="font-bold text-gray-900 text-xs truncate max-w-[140px]">{item.name || '이름 없음'}</h4>
+                                            <span className="text-[10px] font-black text-green-700">
+                                                {typeof item.price === 'number' ? `${item.price.toLocaleString()}원` : '가격 준비중'}
+                                            </span>
                                         </div>
                                         <p className="text-[11px] text-gray-400 truncate leading-tight">{item.description || '상세 설명 명세가 준비되어 있지 않습니다.'}</p>
                                         <div className="flex flex-wrap gap-1 pt-0.5">
-                                            <span className="text-[8px] bg-green-50 text-green-700 border border-green-200/50 font-extrabold px-1 rounded-sm">{item.veganType}</span>
-                                            {item.allergens && item.allergens.map(al => (
-                                                <span key={al} className="text-[8px] bg-red-50 text-red-600 border border-red-100 font-medium px-1 rounded-sm">🚫 {al}</span>
-                                            ))}
+                                            {item.veganType && (
+                                                <span className="text-[8px] bg-green-50 text-green-700 border border-green-200/50 font-extrabold px-1 rounded-sm">{item.veganType}</span>
+                                            )}
+                                            {item.allergens && item.allergens.length > 0 ? (
+                                                item.allergens.map(al => (
+                                                    <span key={al} className="text-[8px] bg-red-50 text-red-600 border border-red-100 font-medium px-1 rounded-sm">🚫 {al}</span>
+                                                ))
+                                            ) : null}
                                         </div>
                                     </div>
                                 </div>
@@ -365,7 +436,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                     </div>
                 )}
 
-                {/* [REVIEW] */}
                 {activeTab === 'REVIEW' && (
                     <div className="space-y-4 animate-in fade-in duration-200">
                         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm space-y-3 text-left">
@@ -398,8 +468,30 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                     <input type="text" placeholder="예: 비건 토마토 파스타" value={writeRecMenu} onChange={(e) => setWriteRecMenu(e.target.value)} className="w-full border p-1.5 rounded-lg bg-gray-50 text-xs font-medium focus:outline-none" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="font-bold text-gray-500 block">📸 사진 이미지 URL (선택)</label>
-                                    <input type="url" placeholder="https://images.unsplash.com/..." value={writePhotoUrl} onChange={(e) => setWritePhotoUrl(e.target.value)} className="w-full border p-1.5 rounded-lg bg-gray-50 text-xs font-medium focus:outline-none" />
+                                    <label className="font-bold text-[11px] text-gray-500 block">📸 사진 첨부 (파일 또는 URL)</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="사진 URL을 붙여넣거나 아래 버튼으로 업로드"
+                                            value={writePhotoUrl}
+                                            onChange={(e) => setWritePhotoUrl(e.target.value)}
+                                            className="flex-1 border p-1.5 rounded-lg bg-gray-50 text-xs font-medium focus:outline-none"
+                                        />
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleFileChange}
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-[10px] rounded-lg transition-all"
+                                        >
+                                            파일 선택
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -414,24 +506,31 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                 </button>
                             </div>
                         </div>
-
                         <hr className="border-gray-200/60 my-2" />
-
                         <p className="font-bold text-gray-800 text-sm text-left">💬 방문자 안심 평판 피드 ({reviews.length})</p>
                         {isReviewLoading && <div className="text-center py-6 font-medium text-gray-400">실시간 리뷰 피드 로딩 중...</div>}
 
                         <div className="space-y-2.5">
                             {reviews.map((rev, idx) => (
-                                <div key={rev.reviewId || `${rev.restaurant_id}-${idx}`} className="bg-white border border-gray-200 rounded-2xl p-4 text-left space-y-1.5 shadow-sm">
+                                <div key={rev.reviewId || `${rev.restaurantId || stableRestaurantId}-${idx}`} className="bg-white border border-gray-200 rounded-2xl p-4 text-left space-y-1.5 shadow-sm">
                                     <div className="flex justify-between items-center text-xs">
-                                        <span className="font-bold text-gray-800">{rev.userNickname || '안심인증회원'}</span>
-                                        <span className="text-[10px] text-gray-400 font-semibold">{rev.visitDate}</span>
+                                        <div className="flex items-center space-x-2">
+                                            {/* 프로필 이미지 정보가 들어올 시 시각화 바인딩 가드 */}
+                                            {rev.userProfileImageUrl && (
+                                                <img src={rev.userProfileImageUrl} alt="avatar" className="w-4 h-4 rounded-full object-cover border" />
+                                            )}
+                                            <span className="font-bold text-gray-800">{rev.userNickname || '안심인증회원'}</span>
+                                        </div>
+                                        {/* 실물 데이터에 맞춘 날짜(visitDate) 또는 생성일(createdAt) 폴백 정렬 */}
+                                        <span className="text-[10px] text-gray-400 font-semibold">
+                                            {rev.visitDate || (rev.createdAt ? rev.createdAt.split('T')[0] : '최근 방문')}
+                                        </span>
                                     </div>
                                     <div className="flex items-center space-x-2 text-xs">
                                         <span className="text-amber-500 font-black">
-                                            {'⭐️'.repeat(Math.max(1, Math.min(5, Math.floor(rev.rating))))}
+                                            {'⭐️'.repeat(Math.max(1, Math.min(5, Math.floor(rev.rating || 5))))}
                                         </span>
-                                        <span className="text-gray-400 font-bold text-[10px]">({rev.rating.toFixed(1)})</span>
+                                        <span className="text-gray-400 font-bold text-[10px]">({(rev.rating || 5.0).toFixed(1)})</span>
                                         {rev.companionCount && <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold">👥 {rev.companionCount}인 방문</span>}
                                     </div>
                                     <p className="text-xs text-gray-600 font-medium whitespace-pre-line leading-relaxed break-all">{rev.content}</p>

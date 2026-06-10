@@ -3,18 +3,27 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-// 🎯 백엔드 명세 기반 리뷰 데이터 타입 설계
+// 🎯 백엔드 명세 기반 리뷰 데이터 타입 일치화 (restaurantId 카멜케이스 적용)
 interface ReviewItem {
-    reviewId?: number;        // 백엔드에서 내려줄 고유 번호
-    // restaurantId: number;     // 필수
-    restaurant_id: number;
-    restaurantName?: string;   // UI 화면에 뿌려줄 식당 이름 (백엔드에 추가 요청 필요)
-    rating: number;           // 필수 (1.0~5.0)
-    content: string;          // 필수
-    photos?: string[];        // 선택 (URL 배열)
-    visitDate?: string;       // 선택
-    companionCount?: number;   // 선택
-    recommendedMenu?: string; // 선택
+    reviewId?: number;
+    restaurantId: number;     // 👈 백엔드 규격 일치화
+    restaurantName?: string;
+    rating: number;
+    content: string;
+    photos?: string[];
+    visitDate?: string;
+    companionCount?: number;
+    recommendedMenu?: string;
+    createdAt?: string;
+}
+
+// 📸 사진 응답 객체 명세 규격 추가 정의
+interface PhotoItem {
+    photoId: number;
+    url: string;
+    type: string;
+    restaurantId?: number;
+    caption?: string;
 }
 
 // 📸 사진첩 모달용 정제 데이터 타입
@@ -26,8 +35,6 @@ interface GalleryPhoto {
 
 export default function MyPage() {
     const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
-
-    // 🚨 작성한 리뷰 리스트 활성화 스위치 상태
     const [isReviewListOpen, setIsReviewListOpen] = useState(false);
 
     // 로컬 저장소 값 기반 동적 바인딩 상태
@@ -36,7 +43,7 @@ export default function MyPage() {
     const [bio, setBio] = useState('여기는 사용자 자기소개 텍스트가 노출되거나 수정 입력되는 공간입니다.');
     const [avatar, setAvatar] = useState('🥑');
 
-    // 🎯 백엔드 실물 리뷰 데이터를 보관할 전역 상태 서버 저장소
+    // 🎯 백엔드 실물 리뷰 및 사진 데이터를 보관할 전역 상태 서버 저장소
     const [myReviews, setMyReviews] = useState<ReviewItem[]>([]);
     const [myPhotos, setMyPhotos] = useState<GalleryPhoto[]>([]);
 
@@ -60,43 +67,56 @@ export default function MyPage() {
                 setAvatar(savedAvatar);
             }
 
-            // 🚀 컴포넌트 마운트 시 사용자의 실물 리뷰 리스트를 수입해옵니다.
-            fetchUserReviews();
+            // 🚀 컴포넌트 마운트 시 데이터 징집 가동
+            fetchUserDataCombined();
         }
     }, []);
 
-    // ⚡ 백엔드와 통신하여 실물 리뷰를 징집하는 엔진
-    const fetchUserReviews = async () => {
+    // ⚡ 리뷰 페이징 데이터 파싱 및 개별 등록 사진 복합 수집 허브 엔지니어링
+    const fetchUserDataCombined = async () => {
         try {
             const accessToken = localStorage.getItem('accessToken');
             const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': accessToken ? `Bearer ${accessToken}` : ''
+            };
 
-            // 💡 [프로젝트 명세 조율] 백엔드의 마이리뷰 조회 API 경로 명칭에 맞춰 정렬하세요.
-            const response = await fetch(`${BACKEND_URL}/review/my`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': accessToken ? `Bearer ${accessToken}` : ''
+            // 1. [리뷰 수집] 마이리뷰 조회 API 가동
+            const reviewRes = await fetch(`${BACKEND_URL}/review/my`, { method: 'GET', headers });
+            let parsedReviews: ReviewItem[] = [];
+
+            if (reviewRes.ok) {
+                const reviewData = await reviewRes.json();
+                // 🎯 Spring Data Page 구조의 content 방 탈탈 털어서 추출 가드 장착
+                if (reviewData && reviewData.content && Array.isArray(reviewData.content)) {
+                    parsedReviews = reviewData.content;
+                } else if (Array.isArray(reviewData)) {
+                    parsedReviews = reviewData;
                 }
-            });
+            }
+            setMyReviews(parsedReviews);
 
-            if (!response.ok) throw new Error('리뷰 목록 로드 실패');
+            // 2. [개별 등록 사진 수집] 별도로 POST /photo를 통해 S3 연동 업로드한 사진 리스트 징집
+            // 사용자의 전용 사진함 명세가 있다면 경로를 변경하고, 우선 안전망 조회를 수행합니다.
+            const photoRes = await fetch(`${BACKEND_URL}/photo/my`, { method: 'GET', headers }).catch(() => null);
+            let parsedPhotos: PhotoItem[] = [];
+            if (photoRes && photoRes.ok) {
+                const photoData = await photoRes.json();
+                parsedPhotos = Array.isArray(photoData) ? photoData : (photoData.content || []);
+            }
 
-            const data: ReviewItem[] = await response.json();
-            const sanitizedReviews = Array.isArray(data) ? data : [];
-
-            // 1. 상태창에 실물 리뷰 배열 주입
-            setMyReviews(sanitizedReviews);
-
-            // 2. 🌟 [리팩터링 핵심] 리뷰 목록 내에 흩어져 있는 photos URL들을 긁어모아 사진첩(Gallery) 데이터로 재조립!
+            // 3. [사진첩 완전 재조립 데이터 가공] 리뷰 이미지 + 순수 개별 등록 이미지 병합
             const extractedPhotos: GalleryPhoto[] = [];
-            sanitizedReviews.forEach((review, rIndex) => {
+
+            // (A) 리뷰 글 본문에 첨부되었던 사진 군단 추출
+            parsedReviews.forEach((review, rIndex) => {
                 if (review.photos && Array.isArray(review.photos)) {
                     review.photos.forEach((photoUrl, pIndex) => {
                         if (photoUrl && photoUrl.trim() !== '') {
                             extractedPhotos.push({
-                                id: `${rIndex}-${pIndex}`,
-                                title: review.recommendedMenu ? `추천메뉴: ${review.recommendedMenu}` : '안심 비건 인증 먹거리',
+                                id: `review-${review.reviewId || rIndex}-${pIndex}`,
+                                title: review.recommendedMenu ? `추천: ${review.recommendedMenu}` : '안심 비건 인증 먹거리',
                                 url: photoUrl
                             });
                         }
@@ -104,20 +124,29 @@ export default function MyPage() {
                 }
             });
 
+            // (B) POST /photo 채널을 통해 단독으로 기재 업로드했던 실물 포토 병합
+            parsedPhotos.forEach((photo, pIndex) => {
+                if (photo.url && photo.url.trim() !== '') {
+                    extractedPhotos.push({
+                        id: `direct-photo-${photo.photoId || pIndex}`,
+                        title: photo.caption || '식당 인증 포토',
+                        url: photo.url
+                    });
+                }
+            });
+
             setMyPhotos(extractedPhotos);
 
         } catch (err) {
-            console.error("🚨 마이페이지 리뷰 연동 실패:", err);
-            // 통신 장애 시 유저 경험을 방해하지 않는 선에서 빈 배열 처리 방어
+            console.error("🚨 마이페이지 마스터 허브 전산 연동 실패:", err);
             setMyReviews([]);
             setMyPhotos([]);
         }
     };
 
-    // 별점 숫자를 이쁜 별 이모지(⭐️) 문자열로 변환해 주는 시각 필터 변환기
     const renderStarRating = (rating: number) => {
         const floorRating = Math.floor(rating);
-        return '⭐️'.repeat(floorRating) || '⭐️';
+        return '⭐️'.repeat(Math.max(1, Math.min(5, floorRating))) || '⭐️';
     };
 
     return (
@@ -127,7 +156,6 @@ export default function MyPage() {
                 <Link
                     href="/"
                     className="absolute top-4 left-4 bg-gray-100 border border-gray-200 text-[10px] font-bold text-gray-500 px-3 py-1.5 rounded-lg hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-all shadow-sm active:scale-95 cursor-pointer"
-                    title="지도 페이지 홈으로 이동"
                 >
                     로고 🌱
                 </Link>
@@ -163,7 +191,6 @@ export default function MyPage() {
                 </div>
 
                 <div className="space-y-3 pt-2">
-                    {/* 📸 동적 사진첩 모달 오픈 트리거 */}
                     <button
                         type="button"
                         onClick={() => setIsPhotoModalOpen(true)}
@@ -172,7 +199,6 @@ export default function MyPage() {
                         사진첩 열기 📸 ({myPhotos.length})
                     </button>
 
-                    {/* 🚨 미구현 영역 해제 및 아코디언 토글형 리뷰 리스트 변신 */}
                     <button
                         type="button"
                         onClick={() => setIsReviewListOpen(!isReviewListOpen)}
@@ -186,7 +212,7 @@ export default function MyPage() {
                     </button>
                 </div>
 
-                {/* 📝 아코디언 컴포넌트: 작성한 리뷰 리스트 실물 뷰포트 레이어 */}
+                {/* 📝 아코디언 컴포넌트: 작성한 리뷰 리스트 레이어 */}
                 {isReviewListOpen && (
                     <div className="pt-2 space-y-3 border-t border-gray-100 max-h-80 overflow-y-auto pr-1 animate-in slide-in-from-top-3 duration-200">
                         {myReviews.length === 0 ? (
@@ -198,10 +224,12 @@ export default function MyPage() {
                                 <div key={review.reviewId || index} className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2 text-left">
                                     <div className="flex justify-between items-center">
                                         <h4 className="text-xs font-bold text-gray-800 truncate max-w-[200px]">
-                                            {/*{review.restaurantName || `안심 인증 식당 (ID: ${review.restaurantId})`}*/}
-                                            {review.restaurantName || `안심 인증 식당 (ID: ${review.restaurant_id})`}
+                                            {/* 🎯 백엔드 오리지널 명세인 카멜케이스 식당 고유 ID 변수로 결속 교정 완료 */}
+                                            {review.restaurantName || `안심 인증 식당 (ID: ${review.restaurantId})`}
                                         </h4>
-                                        <span className="text-[10px] text-gray-400 font-semibold">{review.visitDate || '방문일 미지정'}</span>
+                                        <span className="text-[10px] text-gray-400 font-semibold">
+                                            {review.visitDate ? review.visitDate.split('T')[0] : '방문일 미지정'}
+                                        </span>
                                     </div>
                                     <div className="flex items-center space-x-1.5 text-xs">
                                         <span className="text-amber-500 font-bold">{renderStarRating(review.rating)}</span>
@@ -220,7 +248,6 @@ export default function MyPage() {
                                             👍 추천메뉴: {review.recommendedMenu}
                                         </div>
                                     )}
-                                    {/* 리뷰 내 미니 이미지 썸네일 노출 */}
                                     {review.photos && review.photos.length > 0 && (
                                         <div className="flex space-x-1.5 pt-1 overflow-x-auto">
                                             {review.photos.map((pUrl, pIdx) => (
@@ -239,7 +266,7 @@ export default function MyPage() {
                 </div>
             </div>
 
-            {/* 📸 사진첩 갤러리 모달창 구역 (실물 데이터 파싱 완료) */}
+            {/* 📸 사진첩 갤러리 모달창 구역 (리뷰 업로드 이미지 + 직접 등록 S3 이미지 완벽 연동) */}
             {isPhotoModalOpen && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
                     <div className="w-full max-w-lg bg-white border border-gray-100 rounded-3xl shadow-2xl p-6 relative flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200">

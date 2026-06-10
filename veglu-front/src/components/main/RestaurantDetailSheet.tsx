@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 interface Restaurant {
-    // restaurantId: number;
     restaurant_id: number;
     name: string;
     address: string;
@@ -15,21 +14,21 @@ interface Restaurant {
 interface MenuSpec {
     menuId: number;
     name: string;
-    price: number;
+    price?: number;
     description: string;
-    category: 'MAIN' | 'SIDE' | 'DRINK' | 'DESSERT';
-    veganType: 'VEGAN' | 'LACTO' | 'OVO' | 'LACTO_OVO' | 'PESCO';
-    allergens: string[];
+    category?: 'MAIN' | 'SIDE' | 'DRINK' | 'DESSERT';
+    veganType?: 'VEGAN' | 'LACTO' | 'OVO' | 'LACTO_OVO' | 'PESCO';
+    allergens?: string[];
     imageUrl: string;
     isSignature: boolean;
     isAvailable: boolean;
     isSeasonal: boolean;
 }
 
+// 🎯 백엔드 실제 Response JSON 바디 명세 규격 일치화
 interface ReviewItem {
     reviewId?: number;
-    // restaurantId: number;
-    restaurant_id: number;
+    restaurantId: number;   // 👈 백엔드가 준 오리지널 스펙인 카멜케이스 일치화
     rating: number;
     content: string;
     photos?: string[];
@@ -37,6 +36,10 @@ interface ReviewItem {
     companionCount?: number;
     recommendedMenu?: string;
     userNickname?: string;
+    userProfileImageUrl?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    userId?: number;
 }
 
 interface RestaurantDetailSheetProps {
@@ -53,17 +56,15 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const [shouldRender, setShouldRender] = useState(false);
     const [isAnimatingOut, setIsAnimatingOut] = useState(false);
 
-    // 🛡️ [독립 로컬 금고 개설] 부모의 데이터 노이즈에 절대 영향받지 않는 독립 정수 메모리
+    // 🛡️ 독립 로컬 고정 정수 메모리
     const [stableRestaurantId, setStableRestaurantId] = useState<number>(0);
     const cachedRestaurantRef = useRef<Restaurant | null>(null);
 
-    // 🎯 부모 프롭스의 생명주기를 완벽하게 격리 가둔 상태 락 엔진
+    // 🎯 부모 프롭스의 생명주기 락 엔진
     useEffect(() => {
         if (restaurant) {
             cachedRestaurantRef.current = restaurant;
 
-            // 부모 인터페이스 규격(restaurantId)을 최우선 명시 타격하여 안전망을 확보합니다.
-            // const rawId = restaurant.restaurantId;
             const rawId = restaurant.restaurant_id;
             const parsed = Number(rawId);
 
@@ -84,7 +85,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                 setShouldRender(false);
                 setIsAnimatingOut(false);
                 cachedRestaurantRef.current = null;
-                setStableRestaurantId(0); // 닫힐 때 해제
+                setStableRestaurantId(0);
             }, 300);
             return () => clearTimeout(timer);
         }
@@ -106,7 +107,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const [writePhotoUrl, setWritePhotoUrl] = useState<string>('');
     const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
 
-    // ⚡ 탭 전환 연동 시에도 박제된 청정 정수 ID(`stableRestaurantId`)만 고정 타격
+    // ⚡ 탭 전환 연동 시 fixed 정수 ID 기반 조회
     useEffect(() => {
         if (!stableRestaurantId || stableRestaurantId <= 0) return;
 
@@ -127,11 +128,11 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
 
     const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
 
-    const fetchRestaurantMenus = async (restaurantId: number) => {
+    const fetchRestaurantMenus = async (id: number) => {
         setIsMenuLoading(true);
         try {
             const accessToken = localStorage.getItem('accessToken');
-            const response = await fetch(`${BACKEND_URL}/restaurant/${restaurantId}/menus`, {
+            const response = await fetch(`${BACKEND_URL}/restaurant/${id}/menus`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -162,7 +163,16 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             });
             if (response.ok) {
                 const data = await response.json();
-                setReviews(Array.isArray(data) ? data : []);
+
+                // 🎯 [리팩터링 핵심] Spring Page 래핑 해제 가드 처리
+                // 백엔드가 준 데이터가 .content방을 갖고 있으면 그 안의 리스트를 추출하고, 아니면 이전 통용 배열 방식을 하이브리드로 백업 방어합니다.
+                if (data && data.content && Array.isArray(data.content)) {
+                    setReviews(data.content);
+                } else if (Array.isArray(data)) {
+                    setReviews(data);
+                } else {
+                    setReviews([]);
+                }
             }
         } catch (err) {
             console.error("리뷰 피드 조회 실패:", err);
@@ -188,8 +198,9 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             const accessToken = localStorage.getItem('accessToken');
             const todayStr = new Date().toISOString().split('T')[0];
 
+            // 전송 규격도 카멜케이스 restaurantId 규격과 완벽 동기화 처리
             const reviewBody = {
-                restaurant_id: stableRestaurantId, // ➔ 100% NaN 유실 철벽 방어 완료
+                restaurantId: stableRestaurantId,
                 rating: writeRating,
                 content: writeContent,
                 photos: writePhotoUrl.trim() ? [writePhotoUrl.trim()] : [],
@@ -212,7 +223,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             if (response.ok) {
                 alert('🎉 안심 비건 리뷰가 등록되었습니다!');
                 resetReviewForm();
-                fetchRestaurantReviews(stableRestaurantId); // 목록 새로고침 리패치
+                fetchRestaurantReviews(stableRestaurantId);
             } else {
                 alert('리뷰 등록 실패 (백엔드 세션 만료 혹은 형식 오류)');
             }
@@ -310,19 +321,25 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                 <div key={item.menuId} className="bg-white p-4 border border-gray-200 rounded-2xl flex space-x-3 shadow-sm hover:border-green-500 transition-all relative overflow-hidden">
                                     {item.isSignature && <div className="absolute top-0 left-0 bg-amber-500 text-white text-[8px] font-black px-2 py-0.5 rounded-br-lg uppercase tracking-tighter">RECOMMEND</div>}
                                     <div className="w-16 h-16 bg-gray-100 rounded-xl flex-shrink-0 border overflow-hidden flex items-center justify-center text-xs text-gray-400">
-                                        {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" /> : 'NO IMG'}
+                                        {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" /> : '🌱'}
                                     </div>
                                     <div className="space-y-1 w-full overflow-hidden">
                                         <div className="flex items-center justify-between">
-                                            <h4 className="font-bold text-gray-900 text-xs truncate max-w-[140px]">{item.name}</h4>
-                                            <span className="text-[10px] font-black text-green-700">{item.price.toLocaleString()}원</span>
+                                            <h4 className="font-bold text-gray-900 text-xs truncate max-w-[140px]">{item.name || '이름 없음'}</h4>
+                                            <span className="text-[10px] font-black text-green-700">
+                                                {typeof item.price === 'number' ? `${item.price.toLocaleString()}원` : '가격 준비중'}
+                                            </span>
                                         </div>
                                         <p className="text-[11px] text-gray-400 truncate leading-tight">{item.description || '상세 설명 명세가 준비되어 있지 않습니다.'}</p>
                                         <div className="flex flex-wrap gap-1 pt-0.5">
-                                            <span className="text-[8px] bg-green-50 text-green-700 border border-green-200/50 font-extrabold px-1 rounded-sm">{item.veganType}</span>
-                                            {item.allergens && item.allergens.map(al => (
-                                                <span key={al} className="text-[8px] bg-red-50 text-red-600 border border-red-100 font-medium px-1 rounded-sm">🚫 {al}</span>
-                                            ))}
+                                            {item.veganType && (
+                                                <span className="text-[8px] bg-green-50 text-green-700 border border-green-200/50 font-extrabold px-1 rounded-sm">{item.veganType}</span>
+                                            )}
+                                            {item.allergens && item.allergens.length > 0 ? (
+                                                item.allergens.map(al => (
+                                                    <span key={al} className="text-[8px] bg-red-50 text-red-600 border border-red-100 font-medium px-1 rounded-sm">🚫 {al}</span>
+                                                ))
+                                            ) : null}
                                         </div>
                                     </div>
                                 </div>
@@ -332,7 +349,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                     </div>
                 )}
 
-                {/* [REVIEW] */}
+                {/* [REVIEW] - 🛠️ Page 데이터 매핑 맞춤형 렌더링 리팩터링 */}
                 {activeTab === 'REVIEW' && (
                     <div className="space-y-4 animate-in fade-in duration-200">
 
@@ -395,17 +412,25 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
 
                         <div className="space-y-2.5">
                             {reviews.map((rev, idx) => (
-                                // <div key={rev.reviewId || `${rev.restaurantId}-${idx}`} className="bg-white border border-gray-200 rounded-2xl p-4 text-left space-y-1.5 shadow-sm">
-                                    <div key={rev.reviewId || `${rev.restaurant_id}-${idx}`} className="bg-white border border-gray-200 rounded-2xl p-4 text-left space-y-1.5 shadow-sm">
+                                <div key={rev.reviewId || `${rev.restaurantId || stableRestaurantId}-${idx}`} className="bg-white border border-gray-200 rounded-2xl p-4 text-left space-y-1.5 shadow-sm">
                                     <div className="flex justify-between items-center text-xs">
-                                        <span className="font-bold text-gray-800">{rev.userNickname || '안심인증회원'}</span>
-                                        <span className="text-[10px] text-gray-400 font-semibold">{rev.visitDate}</span>
+                                        <div className="flex items-center space-x-2">
+                                            {/* 프로필 이미지 정보가 들어올 시 시각화 바인딩 가드 */}
+                                            {rev.userProfileImageUrl && (
+                                                <img src={rev.userProfileImageUrl} alt="avatar" className="w-4 h-4 rounded-full object-cover border" />
+                                            )}
+                                            <span className="font-bold text-gray-800">{rev.userNickname || '안심인증회원'}</span>
+                                        </div>
+                                        {/* 실물 데이터에 맞춘 날짜(visitDate) 또는 생성일(createdAt) 폴백 정렬 */}
+                                        <span className="text-[10px] text-gray-400 font-semibold">
+                                            {rev.visitDate || (rev.createdAt ? rev.createdAt.split('T')[0] : '최근 방문')}
+                                        </span>
                                     </div>
                                     <div className="flex items-center space-x-2 text-xs">
                                         <span className="text-amber-500 font-black">
-                                            {'⭐️'.repeat(Math.max(1, Math.min(5, Math.floor(rev.rating))))}
+                                            {'⭐️'.repeat(Math.max(1, Math.min(5, Math.floor(rev.rating || 5))))}
                                         </span>
-                                        <span className="text-gray-400 font-bold text-[10px]">({rev.rating.toFixed(1)})</span>
+                                        <span className="text-gray-400 font-bold text-[10px]">({(rev.rating || 5.0).toFixed(1)})</span>
                                         {rev.companionCount && <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold">👥 {rev.companionCount}인 방문</span>}
                                     </div>
                                     <p className="text-xs text-gray-600 font-medium whitespace-pre-line leading-relaxed break-all">{rev.content}</p>

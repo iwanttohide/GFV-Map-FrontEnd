@@ -30,7 +30,10 @@ export default function LoginForm({ setViewMode, onClose, onLoginSuccess }: Logi
         setIsLoading(true);
 
         try {
-            const response = await fetch('http://192.168.7.120:5000/auth/login', {
+            // 🌱 최신 환경 변수 금고에서 백엔드 기본 API 주소를 징집합니다.
+            const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
+
+            const response = await fetch(`${BACKEND_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -49,44 +52,37 @@ export default function LoginForm({ setViewMode, onClose, onLoginSuccess }: Logi
 
             const data = await response.json();
 
-            // ──────────────────────────────────────────────────────────
-            // 🔄 [완벽 복구] 누락되었던 user_email 금고 저장 장치 재조립
-            // ──────────────────────────────────────────────────────────
+            // 🛡️ 로그인 직후 튕겨나갈 권한별 다이내믹 라우팅 기본값 세팅
+            let destinationPath = '/';
+
             if (data.accessToken) {
-                // 💡 [3중 멀티 안전 가드]
-                // 1. 백엔드가 최상단에 이메일을 주었을 때 (data.email)
-                // 2. 혹은 user 객체 안에 감싸 주었을 때 (data.user?.email)
-                // 3. 그것도 아니면 현재 유저가 이 인풋창에 직접 타이핑한 원본 상태값 (email)을 강제로 징집!
-                const finalSaveEmail = data.email || data.user?.email || email || 'veglu@domain.com';
-
-                // 🎯 제가 날려 먹었던 범인인 이메일 금고 보관 코드를 다시 굳건히 심어줍니다.
-                localStorage.setItem('user_email', finalSaveEmail);
-
+                // 1. 토큰 보관
                 localStorage.setItem('accessToken', data.accessToken);
                 if (data.refreshToken) {
                     localStorage.setItem('refreshToken', data.refreshToken);
                 }
 
+                // 2. 유저 프로필 메타 데이터 금고 보관 (이메일 유실 방지 수호선 가동)
+                const finalSaveEmail = data.email || data.user?.email || email || 'veglu@domain.com';
                 const finalNickname = data.nickname || data.user?.nickname || '익명유저';
                 const finalAvatar = data.profileImageUrl || data.user?.profileImageUrl || 'default';
 
+                localStorage.setItem('user_email', finalSaveEmail);
                 localStorage.setItem('user_nickname', finalNickname);
                 localStorage.setItem('user_avatar', finalAvatar);
+
+                // 3. 권한(Role) 색출 및 맞춤형 다이내믹 라우팅 분기 집행
+                const userRole = data.role || data.user?.role || 'USER';
+                localStorage.setItem('user_role', userRole);
+
             }
-            // ──────────────────────────────────────────────────────────
 
             if (onLoginSuccess) {
                 onLoginSuccess();
             }
 
-            const role = data.role;
-            if (role === 'OWNER') {
-                window.location.href = '/owner/dashboard';
-            } else if (role === 'ADMIN') {
-                window.location.href = '/admin/users';
-            } else {
-                window.location.href = '/';
-            }
+            // 확정된 권한별 타깃 주소로 유저를 안전하게 밀어넣습니다.
+            window.location.href = destinationPath;
 
         } catch (err) {
             setError('서버 연결에 실패했습니다. 네트워크 상태를 확인해 주세요.');

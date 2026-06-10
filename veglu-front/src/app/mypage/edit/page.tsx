@@ -11,6 +11,9 @@ export default function MyPageEdit() {
     const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
     const [isEmojiListOpen, setIsEmojiListOpen] = useState(false);
 
+    // 🚨 와이어프레임 컴포넌트 도면 반영: 회원탈퇴 독립 모달 상태 스위치
+    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+
     const [email, setEmail] = useState('');
     const [nickname, setNickname] = useState('');
     const [bio, setBio] = useState('');
@@ -26,16 +29,11 @@ export default function MyPageEdit() {
             const savedBio = localStorage.getItem('user_bio');
             const savedAvatar = localStorage.getItem('user_avatar');
 
-            // ──────────────────────────────────────────────────────────
-            // 🎯 [결정적 교정] 이메일 undefined/null 오염 오버라이딩 차단 장벽 가동
-            // ──────────────────────────────────────────────────────────
             if (savedEmail && savedEmail !== 'undefined' && savedEmail !== 'null' && savedEmail.trim() !== '') {
                 setEmail(savedEmail);
             } else {
-                // 금고가 오염되었거나 유실되었을 때를 대비한 기획서 기반 차선책 가드
                 setEmail('vegan_user@domain.com');
             }
-            // ──────────────────────────────────────────────────────────
 
             if (savedNickname && savedNickname !== 'undefined' && savedNickname !== 'null') {
                 setNickname(savedNickname);
@@ -120,6 +118,36 @@ export default function MyPageEdit() {
 
         } catch (err) {
             alert('회원 정보 수정 중 오류가 발생했습니다.');
+        }
+    };
+
+    // 🚨 회원탈퇴 최종 집행 엔진 (백엔드 DELETE 통신 연결)
+    const handleWithdrawSubmit = async () => {
+        try {
+            const accessToken = localStorage.getItem('accessToken');
+
+            // 백엔드 회원탈퇴 엔드포인트 호출 (프로젝트 명세 주소 맞춰 정렬)
+            const response = await fetch('http://192.168.7.120:5000/user/withdraw', {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            if (!response.ok) throw new Error('회원 탈퇴 처리 실패');
+
+            // 🧹 금고(LocalStorage) 완전 전역 청소 및 세션 리셋
+            localStorage.clear();
+
+            alert('비건 안심 지도 회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.');
+
+            // 초기 첫 로그인 스크린으로 유저를 안전하게 추방
+            window.location.href = '/';
+        } catch (err) {
+            console.error(err);
+            alert('서버와 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+        } finally {
+            setIsWithdrawModalOpen(false);
         }
     };
 
@@ -210,8 +238,61 @@ export default function MyPageEdit() {
                         수정
                     </button>
                 </div>
+
+                {/* 🚨 피그마 와이어프레임 설계 기획 반영: 최하단 잔잔한 탈퇴 링크 가동 */}
+                <div className="text-center pt-2">
+                    <button
+                        type="button"
+                        onClick={() => setIsWithdrawModalOpen(true)}
+                        className="text-[11px] font-semibold text-gray-400 hover:text-red-500 hover:underline transition-colors"
+                    >
+                        회원 탈퇴하기
+                    </button>
+                </div>
             </form>
 
+            {/* 🚨 피그마 도면 연동: 독립 모달 창 구조 기믹 (오버레이) */}
+            {isWithdrawModalOpen && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+                    <div className="w-full max-w-xs bg-white border border-gray-200 rounded-3xl shadow-2xl p-6 space-y-4 relative animate-in fade-in zoom-in-95 duration-150 text-center">
+
+                        {/* 와이어프레임 명세 가이드 지침: [X] 닫기 버튼 배치 */}
+                        <button
+                            type="button"
+                            onClick={() => setIsWithdrawModalOpen(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors text-sm font-bold focus:outline-none"
+                        >
+                            ✕
+                        </button>
+
+                        <div className="space-y-2 pt-2">
+                            <h3 className="text-sm font-bold text-gray-900">정말 탈퇴하시겠습니까?</h3>
+                            <p className="text-[11px] font-medium text-gray-400 leading-relaxed">
+                                회원 탈퇴 시 기존의 즐겨찾기 식당 목록 및 작성하신 모든 안심 리뷰 데이터가 영구히 소멸되며 복구할 수 없습니다.
+                            </p>
+                        </div>
+
+                        <div className="flex space-x-2.5 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setIsWithdrawModalOpen(false)}
+                                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl text-xs transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleWithdrawSubmit}
+                                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm"
+                            >
+                                탈퇴 확정
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 프로필 이미지 선택 모달 */}
             {isAvatarModalOpen && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 animate-in fade-in duration-100">
                     <div className="w-full max-w-xs bg-white border border-gray-100 rounded-3xl shadow-2xl p-6 space-y-4 relative text-center animate-in fade-in zoom-in-95 duration-100">
@@ -245,6 +326,7 @@ export default function MyPageEdit() {
                 </div>
             )}
 
+            {/* 이모지 리스트 모달 */}
             {isEmojiListOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-100">
                     <div className="w-full max-w-xs bg-white rounded-2xl shadow-2xl p-5 space-y-3 animate-in fade-in zoom-in-95 duration-100">

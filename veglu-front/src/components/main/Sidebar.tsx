@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 
 interface Restaurant {
-    restaurantId: number;
+    // restaurantId: number;
+    restaurant_id: number;
     name: string;
     address: string;
     points: string;
@@ -33,7 +34,8 @@ export default function Sidebar({
         if (sortRule === 'rating') {
             return (b.rating || 0) - (a.rating || 0);
         }
-        return a.restaurantId - b.restaurantId;
+        // return a.restaurantId - b.restaurantId;
+        return a.restaurant_id - b.restaurant_id;
     });
 
     // 💡 접기/펴기 버튼을 누를 때, 내 내부 상태만 바꾸는 게 아니라 부모 타워의 센서까지 즉시 동기화 제어합니다.
@@ -66,10 +68,11 @@ export default function Sidebar({
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {processedList.map((shop, index) => (
                         <div
-                            key={`sidebar-shop-${shop.restaurantId}-${index}`}
-                            onClick={() => onShopSelect(index)}
+                            key={`sidebar-shop-${shop.restaurant_id}-${index}`}
+                            onClick={() => onShopSelect(shop.restaurant_id)}
+
                             className={`p-4 border rounded-2xl bg-white transition-all cursor-pointer hover:border-green-600 hover:shadow-sm ${
-                                selectedIndex === index
+                                selectedIndex === shop.restaurant_id
                                     ? 'border-green-600 ring-2 ring-green-600/10 bg-green-50/20'
                                     : 'border-gray-200'
                             }`}

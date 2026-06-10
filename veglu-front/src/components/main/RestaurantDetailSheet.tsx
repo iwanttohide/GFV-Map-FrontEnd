@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { toggleFavorite, checkFavorite } from '@/libs/api/favorite';
 
 interface Restaurant {
-    // restaurantId: number;
     restaurant_id: number;
     name: string;
     address: string;
@@ -28,7 +28,6 @@ interface MenuSpec {
 
 interface ReviewItem {
     reviewId?: number;
-    // restaurantId: number;
     restaurant_id: number;
     rating: number;
     content: string;
@@ -53,17 +52,15 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const [shouldRender, setShouldRender] = useState(false);
     const [isAnimatingOut, setIsAnimatingOut] = useState(false);
 
-    // 🛡️ [독립 로컬 금고 개설] 부모의 데이터 노이즈에 절대 영향받지 않는 독립 정수 메모리
     const [stableRestaurantId, setStableRestaurantId] = useState<number>(0);
     const cachedRestaurantRef = useRef<Restaurant | null>(null);
 
-    // 🎯 부모 프롭스의 생명주기를 완벽하게 격리 가둔 상태 락 엔진
+    const [isFavorited, setIsFavorited] = useState(false);
+
     useEffect(() => {
         if (restaurant) {
             cachedRestaurantRef.current = restaurant;
 
-            // 부모 인터페이스 규격(restaurantId)을 최우선 명시 타격하여 안전망을 확보합니다.
-            // const rawId = restaurant.restaurantId;
             const rawId = restaurant.restaurant_id;
             const parsed = Number(rawId);
 
@@ -84,11 +81,18 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                 setShouldRender(false);
                 setIsAnimatingOut(false);
                 cachedRestaurantRef.current = null;
-                setStableRestaurantId(0); // 닫힐 때 해제
+                setStableRestaurantId(0);
+                setIsFavorited(false);
             }, 300);
             return () => clearTimeout(timer);
         }
     }, [restaurant]);
+
+    // 즐겨찾기 여부 확인
+    useEffect(() => {
+        if (!stableRestaurantId || stableRestaurantId <= 0) return;
+        checkFavorite(stableRestaurantId).then(setIsFavorited).catch(() => {});
+    }, [stableRestaurantId]);
 
     const currentViewShop = restaurant || cachedRestaurantRef.current;
 
@@ -98,7 +102,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const [reviews, setReviews] = useState<ReviewItem[]>([]);
     const [isReviewLoading, setIsReviewLoading] = useState(false);
 
-    // 📝 리뷰 작성용 인풋 동적 상태 저장소
     const [writeRating, setWriteRating] = useState<number>(5.0);
     const [writeContent, setWriteContent] = useState<string>('');
     const [writeCompanionCount, setWriteCompanionCount] = useState<number>(1);
@@ -106,7 +109,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const [writePhotoUrl, setWritePhotoUrl] = useState<string>('');
     const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
 
-    // ⚡ 탭 전환 연동 시에도 박제된 청정 정수 ID(`stableRestaurantId`)만 고정 타격
     useEffect(() => {
         if (!stableRestaurantId || stableRestaurantId <= 0) return;
 
@@ -189,7 +191,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             const todayStr = new Date().toISOString().split('T')[0];
 
             const reviewBody = {
-                restaurant_id: stableRestaurantId, // ➔ 100% NaN 유실 철벽 방어 완료
+                restaurant_id: stableRestaurantId,
                 rating: writeRating,
                 content: writeContent,
                 photos: writePhotoUrl.trim() ? [writePhotoUrl.trim()] : [],
@@ -212,7 +214,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             if (response.ok) {
                 alert('🎉 안심 비건 리뷰가 등록되었습니다!');
                 resetReviewForm();
-                fetchRestaurantReviews(stableRestaurantId); // 목록 새로고침 리패치
+                fetchRestaurantReviews(stableRestaurantId);
             } else {
                 alert('리뷰 등록 실패 (백엔드 세션 만료 혹은 형식 오류)');
             }
@@ -220,6 +222,15 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             console.error("리뷰 등록 통신 에러:", err);
         } finally {
             setIsSubmittingReview(false);
+        }
+    };
+
+    const handleFavoriteToggle = async () => {
+        try {
+            const res = await toggleFavorite(stableRestaurantId);
+            setIsFavorited(res.favorited);
+        } catch {
+            alert('즐겨찾기 처리에 실패했습니다.');
         }
     };
 
@@ -258,7 +269,29 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                         <p className="text-xs text-gray-500 font-semibold truncate">📍 {currentViewShop.address}</p>
                     </div>
                 </div>
-                <button type="button" onClick={handleCloseTrigger} className="p-2 bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-xl transition-colors border border-gray-200 flex items-center justify-center w-9 h-9">✕</button>
+
+                {/* 즐겨찾기 + 닫기 버튼 */}
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={handleFavoriteToggle}
+                        className={`p-2 rounded-xl transition-colors border flex items-center justify-center w-9 h-9 ${
+                            isFavorited
+                                ? 'bg-yellow-50 border-yellow-300 text-yellow-400 hover:bg-yellow-100'
+                                : 'bg-gray-50 border-gray-200 text-gray-300 hover:bg-gray-100'
+                        }`}
+                        title={isFavorited ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                    >
+                        ⭐
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleCloseTrigger}
+                        className="p-2 bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-xl transition-colors border border-gray-200 flex items-center justify-center w-9 h-9"
+                    >
+                        ✕
+                    </button>
+                </div>
             </div>
 
             {/* 4단 탭 스위치 메뉴 */}
@@ -335,8 +368,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                 {/* [REVIEW] */}
                 {activeTab === 'REVIEW' && (
                     <div className="space-y-4 animate-in fade-in duration-200">
-
-                        {/* 안심 리뷰 작성 폼 */}
                         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm space-y-3 text-left">
                             <p className="font-black text-gray-800 text-xs flex items-center">📝 이 식당에 비건 안심 리뷰 남기기</p>
 
@@ -345,10 +376,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                     <label className="font-bold text-gray-500 block">⭐ 안심 평점 선택</label>
                                     <select
                                         value={writeRating.toString()}
-                                        onChange={(e) => {
-                                            const val = Number(e.target.value);
-                                            setWriteRating(val);
-                                        }}
+                                        onChange={(e) => setWriteRating(Number(e.target.value))}
                                         className="w-full border p-1.5 rounded-lg bg-gray-50 text-xs font-bold focus:outline-none cursor-pointer border-gray-300 text-gray-800"
                                     >
                                         <option value="5">⭐⭐⭐⭐⭐ (5.0)</option>
@@ -376,7 +404,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                             </div>
 
                             <div className="space-y-1">
-                                <label className="font-bold text-[11px] text-gray-500 block"> 본문 내용 (필수)</label>
+                                <label className="font-bold text-[11px] text-gray-500 block">본문 내용 (필수)</label>
                                 <textarea rows={2} placeholder="속이 편하고 맛있는 식당이었나요? 다른 채식인들을 위해 솔직한 안심 평가를 나누어주세요!" value={writeContent} onChange={(e) => setWriteContent(e.target.value)} className="w-full border p-2.5 rounded-xl bg-gray-50 text-xs font-medium focus:outline-none leading-relaxed resize-none" />
                             </div>
 
@@ -389,14 +417,12 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
 
                         <hr className="border-gray-200/60 my-2" />
 
-                        {/* 리뷰 피드 리스트 출력부 */}
                         <p className="font-bold text-gray-800 text-sm text-left">💬 방문자 안심 평판 피드 ({reviews.length})</p>
                         {isReviewLoading && <div className="text-center py-6 font-medium text-gray-400">실시간 리뷰 피드 로딩 중...</div>}
 
                         <div className="space-y-2.5">
                             {reviews.map((rev, idx) => (
-                                // <div key={rev.reviewId || `${rev.restaurantId}-${idx}`} className="bg-white border border-gray-200 rounded-2xl p-4 text-left space-y-1.5 shadow-sm">
-                                    <div key={rev.reviewId || `${rev.restaurant_id}-${idx}`} className="bg-white border border-gray-200 rounded-2xl p-4 text-left space-y-1.5 shadow-sm">
+                                <div key={rev.reviewId || `${rev.restaurant_id}-${idx}`} className="bg-white border border-gray-200 rounded-2xl p-4 text-left space-y-1.5 shadow-sm">
                                     <div className="flex justify-between items-center text-xs">
                                         <span className="font-bold text-gray-800">{rev.userNickname || '안심인증회원'}</span>
                                         <span className="text-[10px] text-gray-400 font-semibold">{rev.visitDate}</span>
@@ -409,11 +435,9 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                         {rev.companionCount && <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold">👥 {rev.companionCount}인 방문</span>}
                                     </div>
                                     <p className="text-xs text-gray-600 font-medium whitespace-pre-line leading-relaxed break-all">{rev.content}</p>
-
                                     {rev.recommendedMenu && (
                                         <div className="text-[10px] bg-green-50 text-green-700 font-bold px-2 py-0.5 rounded-md inline-block">👍 추천메뉴: {rev.recommendedMenu}</div>
                                     )}
-
                                     {rev.photos && rev.photos.length > 0 && (
                                         <div className="flex space-x-1.5 pt-1 overflow-x-auto">
                                             {rev.photos.map((pUrl, pIdx) => (
@@ -447,7 +471,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                         )}
                     </div>
                 )}
-
             </div>
         </div>
     );

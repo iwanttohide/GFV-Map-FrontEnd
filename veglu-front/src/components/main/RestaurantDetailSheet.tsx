@@ -26,7 +26,6 @@ interface MenuSpec {
     isSeasonal: boolean;
 }
 
-// 🎯 백엔드 실제 Response JSON 바디 명세 규격 일치화
 interface ReviewItem {
     reviewId?: number;
     restaurantId: number;
@@ -60,7 +59,67 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const [stableRestaurantId, setStableRestaurantId] = useState<number>(0);
     const cachedRestaurantRef = useRef<Restaurant | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
     const [isFavorited, setIsFavorited] = useState(false);
+    // 🎯 [토스트 상태 분리] 토스트창의 독립적인 라이프사이클 관리를 위한 상태 추가
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+    const [menus, setMenus] = useState<MenuSpec[]>([]);
+    const [isMenuLoading, setIsMenuLoading] = useState(false);
+
+    const [reviews, setReviews] = useState<ReviewItem[]>([]);
+    const [isReviewLoading, setIsReviewLoading] = useState(false);
+
+    const [writeRating, setWriteRating] = useState<number>(5.0);
+    const [writeContent, setWriteContent] = useState<string>('');
+    const [writeCompanionCount, setWriteCompanionCount] = useState<number>(1);
+    const [writeRecMenu, setWriteRecMenu] = useState<string>('');
+    const [writePhotoUrl, setWritePhotoUrl] = useState<string>('');
+    const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
+
+    const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
+
+    // 상세페이지 라이프사이클 및 데이터 선행 징집 락 엔진
+    useEffect(() => {
+        if (restaurant) {
+            cachedRestaurantRef.current = restaurant;
+
+            const rawId = restaurant.restaurant_id;
+            const parsed = Number(rawId);
+
+            if (!isNaN(rawId) && rawId > 0) {
+                setStableRestaurantId(rawId);
+                console.log("🎯 [잠금 성공] 백엔드 명세와 동기화 완료 ID ➔", parsed);
+
+                fetchRestaurantMenus(rawId);
+                fetchRestaurantReviews(rawId);
+            }
+
+            setShouldRender(true);
+            setIsAnimatingOut(false);
+            setActiveTab('HOME');
+            resetReviewForm();
+        } else if (shouldRender) {
+            setIsAnimatingOut(true);
+            const timer = setTimeout(() => {
+                setShouldRender(false);
+                setIsAnimatingOut(false);
+                cachedRestaurantRef.current = null;
+                setStableRestaurantId(0);
+                setIsFavorited(false);
+                setToastMessage(null); // 닫힐 때 팝업 초기화
+                setMenus([]);
+                setReviews([]);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [restaurant]);
+
+    // 즐겨찾기 여부 확인
+    useEffect(() => {
+        if (!stableRestaurantId || stableRestaurantId <= 0) return;
+        checkFavorite(stableRestaurantId).then(setIsFavorited).catch(() => {});
+    }, [stableRestaurantId]);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -68,22 +127,20 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
 
         try {
             const accessToken = localStorage.getItem('accessToken');
-            const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
-
-            // 1. S3 업로드 (FormData)
             const fd = new FormData();
             fd.append('file', file);
 
             const upRes = await fetch(`${BACKEND_URL}/photo/upload`, {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${accessToken}` }, // FormData는 Content-Type 자동 설정
+                headers: { Authorization: `Bearer ${accessToken}` },
                 body: fd,
             });
 
             if (!upRes.ok) throw new Error("S3 업로드 실패");
             const { url } = await upRes.json();
 
-            // 2. DB 사진 등록
+            setWritePhotoUrl(url);
+
             const dbRes = await fetch(`${BACKEND_URL}/photo`, {
                 method: 'POST',
                 headers: {
@@ -101,78 +158,14 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             });
 
             if (dbRes.ok) {
-                alert("사진이 등록되었습니다!");
-                // 등록 후 리뷰나 사진 탭 새로고침
-                if (activeTab === 'PHOTO') fetchRestaurantReviews(stableRestaurantId);
+                setToastMessage("📸 사진이 안전하게 등록되었습니다!");
+                fetchRestaurantReviews(stableRestaurantId);
             }
         } catch (err) {
             console.error("사진 업로드 프로세스 에러:", err);
             alert("사진 업로드 중 문제가 발생했습니다.");
         }
     };
-
-    // 🎯 부모 프롭스의 생명주기 락 엔진
-    useEffect(() => {
-        if (restaurant) {
-            cachedRestaurantRef.current = restaurant;
-
-            const rawId = restaurant.restaurant_id;
-            const parsed = Number(rawId);
-
-            if (!isNaN(rawId) && rawId > 0) {
-                setStableRestaurantId(rawId);
-                console.log("🎯 [잠금 성공] 백엔드 명세와 동기화 완료 ID ➔", parsed);
-            }
-
-            setShouldRender(true);
-            setIsAnimatingOut(false);
-            setActiveTab('HOME');
-            setMenus([]);
-            setReviews([]);
-            resetReviewForm();
-        } else if (shouldRender) {
-            setIsAnimatingOut(true);
-            const timer = setTimeout(() => {
-                setShouldRender(false);
-                setIsAnimatingOut(false);
-                cachedRestaurantRef.current = null;
-                setStableRestaurantId(0);
-                setIsFavorited(false);
-            }, 300);
-            return () => clearTimeout(timer);
-        }
-    }, [restaurant]);
-
-    // 즐겨찾기 여부 확인
-    useEffect(() => {
-        if (!stableRestaurantId || stableRestaurantId <= 0) return;
-        checkFavorite(stableRestaurantId).then(setIsFavorited).catch(() => {});
-    }, [stableRestaurantId]);
-
-    const currentViewShop = restaurant || cachedRestaurantRef.current;
-
-    const [menus, setMenus] = useState<MenuSpec[]>([]);
-    const [isMenuLoading, setIsMenuLoading] = useState(false);
-
-    const [reviews, setReviews] = useState<ReviewItem[]>([]);
-    const [isReviewLoading, setIsReviewLoading] = useState(false);
-
-    const [writeRating, setWriteRating] = useState<number>(5.0);
-    const [writeContent, setWriteContent] = useState<string>('');
-    const [writeCompanionCount, setWriteCompanionCount] = useState<number>(1);
-    const [writeRecMenu, setWriteRecMenu] = useState<string>('');
-    const [writePhotoUrl, setWritePhotoUrl] = useState<string>('');
-    const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
-
-    useEffect(() => {
-        if (!stableRestaurantId || stableRestaurantId <= 0) return;
-
-        if (activeTab === 'MENU') {
-            fetchRestaurantMenus(stableRestaurantId);
-        } else if (activeTab === 'REVIEW' || activeTab === 'PHOTO') {
-            fetchRestaurantReviews(stableRestaurantId);
-        }
-    }, [activeTab, stableRestaurantId]);
 
     const resetReviewForm = () => {
         setWriteRating(5.0);
@@ -181,8 +174,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
         setWriteRecMenu('');
         setWritePhotoUrl('');
     };
-
-    const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
 
     const fetchRestaurantMenus = async (id: number) => {
         setIsMenuLoading(true);
@@ -219,9 +210,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             });
             if (response.ok) {
                 const data = await response.json();
-
-                // 🎯 [리팩터링 핵심] Spring Page 래핑 해제 가드 처리
-                // 백엔드가 준 데이터가 .content방을 갖고 있으면 그 안의 리스트를 추출하고, 아니면 이전 통용 배열 방식을 하이브리드로 백업 방어합니다.
                 if (data && data.content && Array.isArray(data.content)) {
                     setReviews(data.content);
                 } else if (Array.isArray(data)) {
@@ -254,7 +242,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             const accessToken = localStorage.getItem('accessToken');
             const todayStr = new Date().toISOString().split('T')[0];
 
-            // 전송 규격도 카멜케이스 restaurantId 규격과 완벽 동기화 처리
             const reviewBody = {
                 restaurantId: stableRestaurantId,
                 rating: writeRating,
@@ -264,8 +251,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                 companionCount: Number(writeCompanionCount),
                 recommendedMenu: writeRecMenu.trim() || null
             };
-
-            console.log("➡️ 백엔드로 최종 전송하는 리뷰 데이터 패킷 바디:", reviewBody);
 
             const response = await fetch(`${BACKEND_URL}/review`, {
                 method: 'POST',
@@ -277,7 +262,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             });
 
             if (response.ok) {
-                alert('🎉 안심 비건 리뷰가 등록되었습니다!');
+                setToastMessage("🎉 안심 비건 리뷰가 등록되었습니다!");
                 resetReviewForm();
                 fetchRestaurantReviews(stableRestaurantId);
             } else {
@@ -293,8 +278,20 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const handleFavoriteToggle = async () => {
         try {
             const res = await toggleFavorite(stableRestaurantId);
-            setIsFavorited(res.favorited);
-        } catch {
+
+            // 🎯 [완치 포인트 1] 백엔드가 객체 형태 { favorited: true } 로 주든,
+            // 혹은 순수 boolean 값(true/false) 자체로 주든 둘 다 대응할 수 있도록 완벽한 하이브리드 판정 가드를 칩니다.
+            const nextFavoriteStatus = typeof res === 'object' && res !== null ? !!res.favorited : !!res;
+
+            setIsFavorited(nextFavoriteStatus);
+
+            if (nextFavoriteStatus) {
+                setToastMessage("💛 안심 식당으로 찜 완료!");
+            } else {
+                setToastMessage("☆ 즐겨찾기가 해제되었습니다.");
+            }
+        } catch (err) {
+            console.error("즐겨찾기 토글 처리 오류:", err);
             alert('즐겨찾기 처리에 실패했습니다.');
         }
     };
@@ -303,6 +300,17 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
         setIsAnimatingOut(true);
         setTimeout(() => { onClose(); }, 300);
     };
+
+    // 🎯 [자동 타이머 가드] 토스트창이 열리면 정확히 2.5초 뒤에 자동으로 페이드아웃 소멸하게 처리합니다.
+    useEffect(() => {
+        if (!toastMessage) return;
+        const timer = setTimeout(() => {
+            setToastMessage(null);
+        }, 2500);
+        return () => clearTimeout(timer);
+    }, [toastMessage]);
+
+    const currentViewShop = restaurant || cachedRestaurantRef.current;
 
     if (!shouldRender || !currentViewShop) return null;
 
@@ -319,7 +327,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             }`}
         >
             {/* 기본 정보 상단 타이틀 바 */}
-            <div className="flex items-start justify-between border-b border-gray-100 pb-3 flex-shrink-0">
+            <div className="flex items-start justify-between border-b border-gray-100 pb-3 flex-shrink-0 relative">
                 <div className="flex items-center space-x-4 overflow-hidden">
                     <div className="w-14 h-14 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center flex-shrink-0 text-xl shadow-inner">🌱</div>
                     <div className="space-y-1 overflow-hidden">
@@ -335,20 +343,28 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                     </div>
                 </div>
 
-                {/* 즐겨찾기 + 닫기 버튼 */}
-                <div className="flex items-center gap-2">
+                {/* 즐겨찾기 + 닫기 버튼 구역 */}
+                <div className="flex items-center gap-2 relative">
+                    {toastMessage && (
+                        <div className="absolute bottom-14 right-0 bg-black text-white font-black text-[11px] px-4 py-2 rounded-xl shadow-2xl tracking-wide z-[999] flex items-center gap-1.5 border border-white/20 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            {toastMessage}
+                        </div>
+                    )}
+
                     <button
                         type="button"
                         onClick={handleFavoriteToggle}
-                        className={`p-2 rounded-xl transition-colors border flex items-center justify-center w-9 h-9 ${
+                        style={{ color: isFavorited ? '#FBBF24' : '#D1D5DB' }}
+                        className={`p-2 rounded-xl transition-all duration-300 border flex items-center justify-center w-9 h-9 text-lg shadow-sm active:scale-95 cursor-pointer ${
                             isFavorited
-                                ? 'bg-yellow-50 border-yellow-300 text-yellow-400 hover:bg-yellow-100'
-                                : 'bg-gray-50 border-gray-200 text-gray-300 hover:bg-gray-100'
+                                ? 'bg-yellow-50 border-yellow-400 font-black'
+                                : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                         }`}
                         title={isFavorited ? '즐겨찾기 해제' : '즐겨찾기 추가'}
                     >
-                        ⭐
+                        {isFavorited ? '★' : '☆'}
                     </button>
+
                     <button
                         type="button"
                         onClick={handleCloseTrigger}
@@ -436,6 +452,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                     </div>
                 )}
 
+                {/* [REVIEW] */}
                 {activeTab === 'REVIEW' && (
                     <div className="space-y-4 animate-in fade-in duration-200">
                         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm space-y-3 text-left">
@@ -462,36 +479,37 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 text-[11px]">
+                            <div className="space-y-1">
+                                <label className="font-bold text-[11px] text-gray-500 block">📸 사진 첨부 (파일 또는 URL)</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="사진 URL을 붙여넣거나 우측 버튼으로 업로드"
+                                        value={writePhotoUrl}
+                                        onChange={(e) => setWritePhotoUrl(e.target.value)}
+                                        className="flex-1 border p-1.5 rounded-lg bg-gray-50 text-xs font-medium focus:outline-none"
+                                    />
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileChange}
+                                        accept="image/*"
+                                        className="hidden"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-[10px] rounded-lg transition-all"
+                                    >
+                                        파일 선택
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 text-[11px]">
                                 <div className="space-y-1">
                                     <label className="font-bold text-gray-500 block">👍 추천 메뉴 입력 (선택)</label>
                                     <input type="text" placeholder="예: 비건 토마토 파스타" value={writeRecMenu} onChange={(e) => setWriteRecMenu(e.target.value)} className="w-full border p-1.5 rounded-lg bg-gray-50 text-xs font-medium focus:outline-none" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="font-bold text-[11px] text-gray-500 block">📸 사진 첨부 (파일 또는 URL)</label>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            placeholder="사진 URL을 붙여넣거나 아래 버튼으로 업로드"
-                                            value={writePhotoUrl}
-                                            onChange={(e) => setWritePhotoUrl(e.target.value)}
-                                            className="flex-1 border p-1.5 rounded-lg bg-gray-50 text-xs font-medium focus:outline-none"
-                                        />
-                                        <input
-                                            type="file"
-                                            ref={fileInputRef}
-                                            onChange={handleFileChange}
-                                            accept="image/*"
-                                            className="hidden"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-[10px] rounded-lg transition-all"
-                                        >
-                                            파일 선택
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
 
@@ -515,13 +533,11 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                 <div key={rev.reviewId || `${rev.restaurantId || stableRestaurantId}-${idx}`} className="bg-white border border-gray-200 rounded-2xl p-4 text-left space-y-1.5 shadow-sm">
                                     <div className="flex justify-between items-center text-xs">
                                         <div className="flex items-center space-x-2">
-                                            {/* 프로필 이미지 정보가 들어올 시 시각화 바인딩 가드 */}
                                             {rev.userProfileImageUrl && (
                                                 <img src={rev.userProfileImageUrl} alt="avatar" className="w-4 h-4 rounded-full object-cover border" />
                                             )}
                                             <span className="font-bold text-gray-800">{rev.userNickname || '안심인증회원'}</span>
                                         </div>
-                                        {/* 실물 데이터에 맞춘 날짜(visitDate) 또는 생성일(createdAt) 폴백 정렬 */}
                                         <span className="text-[10px] text-gray-400 font-semibold">
                                             {rev.visitDate || (rev.createdAt ? rev.createdAt.split('T')[0] : '최근 방문')}
                                         </span>

@@ -6,6 +6,7 @@ import Sidebar from '@/components/main/Sidebar';
 import MapContainer from '@/components/main/MapContainer';
 import AuthModal from '@/components/auth/AuthModal';
 import RestaurantDetailSheet from '@/components/main/RestaurantDetailSheet';
+import { getMyFavorites } from '@/libs/api/favorite'; // 🎯 유저님이 제공해주신 API 함수 로드
 
 interface Restaurant {
     restaurant_id: number;
@@ -26,8 +27,14 @@ export default function MainPage() {
     const [selectedRestaurantId, setSelectedRestaurantId] = useState<number | null>(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+    // 🎯 즐겨찾기 모드 활성화 상태 센서 전역 스위치 추가
+    const [isFavoriteMode, setIsFavoriteMode] = useState(false);
+
     const handleHeaderFilter = async (filterData: any) => {
         console.log("➡️ 부모가 전달받은 원본 조건 데이터:", filterData);
+
+        // 즐겨찾기 모드가 켜져 있다면 검색 작동 시 충돌 방지를 위해 스위치를 Off 해줍니다.
+        setIsFavoriteMode(false);
 
         const currentCategory = filterData.searchCategory;
         const currentKeyword = (filterData.keyword || '').trim();
@@ -99,6 +106,33 @@ export default function MainPage() {
             console.error("초기 식당 데이터 로드 실패:", err);
         }
     };
+
+    // 🎯 [실시간 동기화 라인] 즐겨찾기 스위치를 토글할 때 작동하는 핵심 비동기 스트림 제어 훅
+    useEffect(() => {
+        if (!isLoggedIn) return;
+
+        if (isFavoriteMode) {
+            // ⭐ 즐겨찾기 탭 활성화 시: 백엔드에서 찜한 식당 Page 객체를 징집해 필터 변환을 수행합니다.
+            getMyFavorites(0, 100)
+                .then((pageData) => {
+                    // 유저님이 매핑 규격을 적어놓으신 r.restaurant_id가 일치하는 녀석들만 마스터 시드군에서 선별합니다.
+                    const favoriteIds = pageData.content.map((item: any) => item.restaurant_id);
+                    const filtered = allRestaurants.filter(r => favoriteIds.includes(r.restaurant_id));
+
+                    setRestaurants(filtered);
+                    setSelectedRestaurantId(null);
+                    console.log("⭐ [즐겨찾기 징집 동기화 완료] 매칭 개수:", filtered.length, "개");
+                })
+                .catch((err) => {
+                    console.error("즐겨찾기 목록 복원 실패:", err);
+                    setRestaurants([]);
+                });
+        } else {
+            // ⭐ 즐겨찾기 탭 해제 시: 마스터 원본 백업본 전체 리스트로 즉시 주소창 복구
+            setRestaurants(allRestaurants);
+            setSelectedRestaurantId(null);
+        }
+    }, [isFavoriteMode, allRestaurants, isLoggedIn]);
 
     // restaurants 로드 완료 후 쿼리스트링 체크 → 바텀시트 자동 오픈
     useEffect(() => {
@@ -191,6 +225,7 @@ export default function MainPage() {
             setRestaurants([]);
             setAllRestaurants([]);
             setSelectedRestaurantId(null);
+            setIsFavoriteMode(false); // 리셋
         }
     };
 
@@ -221,6 +256,22 @@ export default function MainPage() {
 
                     <div className="relative w-full h-[calc(100vh-64px)] overflow-hidden bg-gray-50">
 
+                        {/* 🎯 [공중부양 플로팅 토글 제어 인터페이스 설계]
+                           - 사용자가 원클릭으로 즐겨찾기 모드를 온/오프할 수 있게 배치한 인터랙티브 레이어 노드입니다. */}
+                        <div className="absolute top-4 left-[380px] z-10 animate-in fade-in slide-in-from-left-5 duration-200">
+                            <button
+                                type="button"
+                                onClick={() => setIsFavoriteMode(!isFavoriteMode)}
+                                className={`px-4 py-2.5 rounded-xl font-black text-xs border shadow-md flex items-center gap-2 transition-all active:scale-95 cursor-pointer ${
+                                    isFavoriteMode
+                                        ? 'bg-yellow-400 border-yellow-400 text-white font-black'
+                                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 font-bold'
+                                }`}
+                            >
+                                <span>⭐</span> {isFavoriteMode ? '전체 보기로 복원' : '내가 찜한 안심 식당만 보기'}
+                            </button>
+                        </div>
+
                         <MapContainer
                             restaurants={restaurants}
                             selectedId={selectedRestaurantId}
@@ -235,9 +286,15 @@ export default function MainPage() {
                             onToggleSidebar={(open) => setIsSidebarOpen(open)}
                         />
 
+                        {/* 🎯 바텀시트에서 즐겨찾기 별을 클릭하여 상태를 갱신하면, 메인 화면 리스트가 자동 반응하도록 콜백 채널 설계 */}
                         <RestaurantDetailSheet
                             restaurant={selectedRestaurantId !== null ? (restaurants.find(r => r.restaurant_id === selectedRestaurantId) || null) : null}
-                            onClose={() => setSelectedRestaurantId(null)}
+                            onClose={() => {
+                                setSelectedRestaurantId(null);
+                                // 💡 [UX 최적화 가드] 상세시트를 닫을 때 즐겨찾기 모드가 켜져 있었다면
+                                // 바텀시트 안에서 하트를 해제했을 확률이 높으므로 리스트를 백그라운드 실시간 강제 새로고침 리패치 처리합니다.
+                                if (isFavoriteMode) setIsFavoriteMode(false);
+                            }}
                             isSidebarOpen={isSidebarOpen}
                         />
 

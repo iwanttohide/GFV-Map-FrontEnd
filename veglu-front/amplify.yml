@@ -8,7 +8,6 @@ applications:
             - npm ci
         build:
           commands:
-            - echo "NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}" > .env
             - echo "NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}" > .env.production
             - npm run build
       artifacts:

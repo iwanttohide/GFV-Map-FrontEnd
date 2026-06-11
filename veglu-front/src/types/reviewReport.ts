@@ -1,4 +1,4 @@
-export type ReportStatus = 'PENDING' | 'RESOLVED' | 'DISMISSED'
+export type ReportStatus = 'PENDING' | 'RESOLVED' | 'DISMISSED' | 'REJECTED'
 export type ReportCategory = 'ABUSE' | 'FALSE_REVIEW' | 'AD' | 'IRRELEVANT'
 
 export interface ReviewReportResponseDto {

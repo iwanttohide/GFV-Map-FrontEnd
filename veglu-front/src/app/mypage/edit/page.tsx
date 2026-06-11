@@ -92,6 +92,26 @@ export default function MyPageEdit() {
 
         try {
             const accessToken = localStorage.getItem('accessToken');
+
+            // 💡 1. FormData 객체 생성
+            const formData = new FormData();
+            
+            // 💡 2. 데이터 추가 (파일이 실제 파일 객체라면 file을, Base64 문자열이라면 그 값을 넣으세요)
+            formData.append('nickname', nickname);
+            formData.append('bio', bio);
+            formData.append('profileImageUrl', avatar); // 백엔드에서 Base64로 받는지 파일로 받는지 확인 필수!
+    
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/update`, {
+                method: 'PUT',
+                headers: {
+                    // 💡 3. Content-Type 헤더를 지워야 합니다! (브라우저가 boundary를 자동 생성함)
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: formData // JSON.stringify 대신 formData를 바로 전달
+            });
+    
+            if (!response.ok) throw new Error('서버 수정 실패');
+            
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/update`, {
                 method: 'PUT',
                 headers: {

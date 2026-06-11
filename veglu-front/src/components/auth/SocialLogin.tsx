@@ -109,7 +109,7 @@ import React from 'react';
 
 export default function SocialLogin() {
     // 프론트엔드 자신의 도메인 주소 (콘솔 설정에 등록된 Callback URL 주소)
-    const FRONTEND_URL = 'http://hjp7208.site';
+    const FRONTEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
     // 🟡 카카오 상숫값 정의
     const KAKAO_CLIENT_ID = '5cbb4b90ecb89c2feefea4ade7ed1db0';

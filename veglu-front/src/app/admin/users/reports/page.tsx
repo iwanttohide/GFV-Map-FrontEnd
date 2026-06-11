@@ -17,6 +17,7 @@ export default function UserReportsPage() {
     const [resolveTarget, setResolveTarget] = useState<ReviewReportResponseDto | null>(null)
     const [adminNote, setAdminNote]         = useState('')
     const [actionLoading, setActionLoading] = useState(false)
+    const [toast, setToast]                 = useState<string | null>(null)
 
     useEffect(() => {
         const fetchReports = async () => {
@@ -40,8 +41,13 @@ export default function UserReportsPage() {
         setActionLoading(true)
         try {
             await deleteReview(deleteTarget.reviewId)
-            // 삭제한 건 목록에서 바로 제거
-            setReports((prev) => prev.filter((r) => r.reportId !== deleteTarget.reportId))
+            setReports((prev) => prev.map((r) =>
+                r.reportId === deleteTarget.reportId
+                    ? { ...r, status: 'RESOLVED', statusLabel: '신고완료' }
+                    : r
+            ))
+            setToast('리뷰가 삭제되었습니다.')
+            setTimeout(() => setToast(null), 3000)
         } catch {
             alert('삭제에 실패했습니다.')
         } finally {
@@ -56,14 +62,14 @@ export default function UserReportsPage() {
         const targetId = resolveTarget.reportId
         try {
             await resolveReport(targetId, adminNote || undefined)
-            // 신고 해제 → 처리 완료 표시
             setReports((prev) =>
                 prev.map((r) =>
-                    r.reportId === targetId ? { ...r, status: 'RESOLVED' } : r
+                    r.reportId === targetId ? { ...r, status: 'REJECTED' } : r
                 )
             )
-            // 3초 후 목록에서 제거
+            setToast('해제 완료되었습니다.')
             setTimeout(() => {
+                setToast(null)
                 setReports((prev) => prev.filter((r) => r.reportId !== targetId))
             }, 3000)
         } catch {
@@ -77,6 +83,26 @@ export default function UserReportsPage() {
 
     return (
         <>
+            {toast && createPortal(
+                <div style={{
+                    position: 'fixed',
+                    bottom: '24px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 9999,
+                    background: '#1f2937',
+                    color: 'white',
+                    fontSize: '14px',
+                    padding: '12px 20px',
+                    borderRadius: '999px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    whiteSpace: 'nowrap',
+                }}>
+                    {toast}
+                </div>,
+                document.body
+            )}
+
             <div className="max-w-lg mx-auto px-5 py-6">
                 <h2 className="text-base font-semibold text-gray-900 mb-4">신고된 리뷰</h2>
 
@@ -127,8 +153,8 @@ export default function UserReportsPage() {
                             이전
                         </button>
                         <span className="px-3 py-1.5 text-sm text-gray-500">
-                        {page + 1} / {totalPages}
-                    </span>
+                            {page + 1} / {totalPages}
+                        </span>
                         <button
                             onClick={() => setPage((p) => p + 1)}
                             disabled={page >= totalPages - 1}

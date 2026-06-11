@@ -275,11 +275,10 @@ export default function MainPage() {
                             <button
                                 type="button"
                                 onClick={() => setIsFavoriteMode(!isFavoriteMode)}
-                                className={`px-4 py-2.5 rounded-xl font-black text-xs border shadow-md flex items-center gap-2 transition-all active:scale-95 cursor-pointer ${
-                                    isFavoriteMode
+                                className={`px-4 py-2.5 rounded-xl font-black text-xs border shadow-md flex items-center gap-2 transition-all active:scale-95 cursor-pointer ${isFavoriteMode
                                         ? 'bg-yellow-400 border-yellow-400 text-white font-black'
                                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 font-bold'
-                                }`}
+                                    }`}
                             >
                                 <span>⭐</span> {isFavoriteMode ? '전체 보기로 복원' : '내가 찜한 안심 식당만 보기'}
                             </button>

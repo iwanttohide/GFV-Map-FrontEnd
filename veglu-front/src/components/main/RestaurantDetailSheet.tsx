@@ -92,10 +92,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                 setStableRestaurantId(rawId);
                 console.log("🎯 [잠금 성공] 백엔드 명세와 동기화 완료 ID ➔", parsed);
 
-                checkFavorite(rawId)
-                    .then(setIsFavorited)
-                    .catch(() => setIsFavorited(false));
-
                 fetchRestaurantMenus(rawId);
                 fetchRestaurantReviews(rawId);
             }
@@ -483,7 +479,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                     <input
                                         type="text"
                                         placeholder="우측 버튼으로 사진 업로드"
-                                        // 🎯 기획 명세 수립: 버킷 주소가 아닌 가로챈 이미지 파일명 상태 출력
                                         value={uploadedFileName}
                                         className="flex-1 border p-1.5 rounded-lg bg-gray-50 text-xs font-medium focus:outline-none"
                                         disabled={true}

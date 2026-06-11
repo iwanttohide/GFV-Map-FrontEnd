@@ -130,6 +130,7 @@ export default function MyPageEdit() {
             localStorage.setItem('user_avatar', avatar);
 
             alert('✅ 회원 정보 수정이 완료되었습니다.');
+            router.push('/mypage');
 
             setTimeout(() => {
                 window.location.href = '/mypage';

@@ -1,4 +1,4 @@
-const BASE_URL = 'http://192.168.7.120:5000';
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export async function serverApiClient(
     endpoint: string,

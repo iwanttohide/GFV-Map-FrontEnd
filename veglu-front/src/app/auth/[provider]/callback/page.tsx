@@ -35,7 +35,7 @@ export default function IntegratedSocialAuthCallbackPage() {
 
             try {
                 // 단 하나의 전역 변수 백엔드 도메인 주소 수입
-                const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
+                const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
                 console.log(`🚀 [통합 대기실] 백엔드로 찌르는 최종 엔드포인트 ➔ ${BACKEND_URL}/auth/${provider}/login`);
 

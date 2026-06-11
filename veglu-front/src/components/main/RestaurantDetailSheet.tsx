@@ -78,7 +78,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const [uploadedFileName, setUploadedFileName] = useState<string>(''); // 🎯 순수 사진 파일명 추적 상태망 유지
     const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
 
-    const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
+    const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
     useEffect(() => {
         if (restaurant) {

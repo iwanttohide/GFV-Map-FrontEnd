@@ -92,7 +92,7 @@ export default function MyPageEdit() {
 
         try {
             const accessToken = localStorage.getItem('accessToken');
-            const response = await fetch('http://192.168.7.120:5000/user/update', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/update`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ export default function MyPageEdit() {
             const accessToken = localStorage.getItem('accessToken');
 
             // 백엔드 회원탈퇴 엔드포인트 호출 (프로젝트 명세 주소 맞춰 정렬)
-            const response = await fetch('http://192.168.7.120:5000/user/withdraw', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/withdraw`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`

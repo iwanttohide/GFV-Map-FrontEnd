@@ -31,7 +31,7 @@ export default function LoginForm({ setViewMode, onClose, onLoginSuccess }: Logi
 
         try {
             // 🌱 최신 환경 변수 금고에서 백엔드 기본 API 주소를 징집합니다.
-            const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
+            const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
             const response = await fetch(`${BACKEND_URL}/auth/login`, {
                 method: 'POST',

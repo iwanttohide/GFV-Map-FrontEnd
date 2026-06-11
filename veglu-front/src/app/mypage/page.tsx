@@ -76,7 +76,7 @@ export default function MyPage() {
     const fetchUserDataCombined = async () => {
         try {
             const accessToken = localStorage.getItem('accessToken');
-            const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://192.168.7.120:5000';
+            const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
             const headers = {
                 'Content-Type': 'application/json',
                 'Authorization': accessToken ? `Bearer ${accessToken}` : ''

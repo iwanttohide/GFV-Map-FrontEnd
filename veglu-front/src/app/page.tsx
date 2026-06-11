@@ -50,11 +50,11 @@ export default function MainPage() {
             const accessToken = localStorage.getItem('accessToken');
             const targetKeyword = encodeURIComponent(currentKeyword);
 
-            let apiUrl = `http://192.168.7.120:5000/restaurant/name?keyword=${targetKeyword}`;
+            let apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/restaurant/name?keyword=${targetKeyword}`;
             if (currentCategory === 'region') {
-                apiUrl = `http://192.168.7.120:5000/restaurant/region?keyword=${targetKeyword}`;
+                apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/restaurant/region?keyword=${targetKeyword}`;
             } else if (currentCategory === 'menu') {
-                apiUrl = `http://192.168.7.120:5000/restaurant/menu?keyword=${targetKeyword}`;
+                apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/restaurant/menu?keyword=${targetKeyword}`;
             }
 
             console.log(`🔎 [검색 실행] 백엔드로 찌르는 최종 주소 ➔ ${apiUrl}`);
@@ -84,7 +84,7 @@ export default function MainPage() {
             const accessToken = localStorage.getItem('accessToken');
 
             const response = await fetch(
-                'http://192.168.7.120:5000/restaurant/name?keyword=',
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/restaurant/name?keyword=`,
                 {
                     method: 'GET',
                     headers: {
@@ -189,7 +189,7 @@ export default function MainPage() {
             }
 
             try {
-                const response = await fetch('http://192.168.7.120:5000/auth/refresh', {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

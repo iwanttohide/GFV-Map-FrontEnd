@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { toggleFavorite, checkFavorite } from '@/libs/api/favorite';
 import { createPhoto, getPhotos } from '@/libs/api/photo';
+import { getRestaurant } from '@/libs/api/restaurant';
 
 interface Restaurant {
     restaurant_id: number;
@@ -11,6 +12,15 @@ interface Restaurant {
     points: string;
     matchedMenus: string[];
     veganType: string;
+}
+
+interface RestaurantDetail {
+    restaurant_id: number;
+    name: string;
+    address: string;
+    phone?: string;
+    businessHours?: Record<string, string>;
+    veganType?: string;
 }
 
 interface MenuSpec {
@@ -71,6 +81,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const [reviews, setReviews] = useState<ReviewItem[]>([]);
     const [isReviewLoading, setIsReviewLoading] = useState(false);
     const [ownerPhotos, setOwnerPhotos] = useState<string[]>([]);
+    const [detailData, setDetailData] = useState<RestaurantDetail | null>(null);
 
     const [writeRating, setWriteRating] = useState<number>(5.0);
     const [writeContent, setWriteContent] = useState<string>('');
@@ -81,102 +92,6 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
     const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
 
     const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-    useEffect(() => {
-        if (restaurant) {
-            cachedRestaurantRef.current = restaurant;
-
-            const rawId = restaurant.restaurant_id;
-            const parsed = Number(rawId);
-
-            if (!isNaN(rawId) && rawId > 0) {
-                setStableRestaurantId(rawId);
-                console.log("🎯 [잠금 성공] 백엔드 명세와 동기화 완료 ID ➔", parsed);
-
-                fetchRestaurantMenus(rawId);
-                fetchRestaurantReviews(rawId);
-                fetchOwnerPhotos(rawId);
-            }
-
-            setShouldRender(true);
-            setIsAnimatingOut(false);
-            setActiveTab('HOME');
-            resetReviewForm();
-        } else if (shouldRender) {
-            setIsAnimatingOut(true);
-            const timer = setTimeout(() => {
-                setShouldRender(false);
-                setIsAnimatingOut(false);
-                cachedRestaurantRef.current = null;
-                setStableRestaurantId(0);
-                setIsFavorited(false);
-                setToastMessage(null);
-                setMenus([]);
-                setReviews([]);
-                setOwnerPhotos([]);
-            }, 300);
-            return () => clearTimeout(timer);
-        }
-    }, [restaurant]);
-
-    // 즐겨찾기 여부 확인
-    useEffect(() => {
-        if (!stableRestaurantId || stableRestaurantId <= 0) return;
-        checkFavorite(stableRestaurantId)
-            .then((res: { isFavorite: boolean }) => setIsFavorited(res.isFavorite))
-            .catch(() => {});
-    }, [stableRestaurantId]);
-
-    // 토스트 자동 소멸
-    useEffect(() => {
-        if (!toastMessage) return;
-        const timer = setTimeout(() => setToastMessage(null), 2500);
-        return () => clearTimeout(timer);
-    }, [toastMessage]);
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file || stableRestaurantId === 0) return;
-
-        // 🎯 [순수 요구명세 수립] 사용자가 고른 실물 이미지의 파일명을 상단 상태칸에 고착
-        setUploadedFileName(file.name);
-
-        try {
-            const accessToken = localStorage.getItem('accessToken');
-            const fd = new FormData();
-            fd.append('file', file);
-
-            // 1단계: S3 바이너리 파일 전송망 노크
-            const upRes = await fetch(`${BACKEND_URL}/photo/upload`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${accessToken}` },
-                body: fd,
-            });
-
-            if (!upRes.ok) throw new Error("S3 업로드 실패");
-            const { url } = await upRes.json();
-
-            setWritePhotoUrl(url);
-
-            // 2단계: 🎯 [photo.ts 내부 구조 결속] 하드코딩 fetch 구역을 원천 추상화 함수인 createPhoto로 정밀 이식 교체 완료
-            await createPhoto({
-                url: url,
-                type: 'RESTAURANT',
-                restaurantId: stableRestaurantId,
-                menuId: undefined,
-                caption: "식당 사진",
-                isMain: false
-            });
-
-            setToastMessage("📸 사진이 안전하게 등록되었습니다!");
-            fetchRestaurantReviews(stableRestaurantId);
-            fetchOwnerPhotos(stableRestaurantId);
-
-        } catch (err) {
-            console.error("사진 업로드 프로세스 에러:", err);
-            alert("사진 업로드 중 문제가 발생했습니다.");
-        }
-    };
 
     const resetReviewForm = () => {
         setWriteRating(5.0);
@@ -271,6 +186,61 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
         }
     };
 
+    const fetchRestaurantDetail = async (id: number) => {
+        try {
+            const data = await getRestaurant(id);
+            if (data) {
+                setDetailData(data as RestaurantDetail);
+            }
+        } catch (err) {
+            console.error("가게 상세 정보 조회 실패:", err);
+        }
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || stableRestaurantId === 0) return;
+
+        // 🎯 [순수 요구명세 수립] 사용자가 고른 실물 이미지의 파일명을 상단 상태칸에 고착
+        setUploadedFileName(file.name);
+
+        try {
+            const accessToken = localStorage.getItem('accessToken');
+            const fd = new FormData();
+            fd.append('file', file);
+
+            // 1단계: S3 바이너리 파일 전송망 노크
+            const upRes = await fetch(`${BACKEND_URL}/photo/upload`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${accessToken}` },
+                body: fd,
+            });
+
+            if (!upRes.ok) throw new Error("S3 업로드 실패");
+            const { url } = await upRes.json();
+
+            setWritePhotoUrl(url);
+
+            // 2단계: 🎯 [photo.ts 내부 구조 결속] 하드코딩 fetch 구역을 원천 추상화 함수인 createPhoto로 정밀 이식 교체 완료
+            await createPhoto({
+                url: url,
+                type: 'RESTAURANT',
+                restaurantId: stableRestaurantId,
+                menuId: undefined,
+                caption: "식당 사진",
+                isMain: false
+            });
+
+            setToastMessage("📸 사진이 안전하게 등록되었습니다!");
+            fetchRestaurantReviews(stableRestaurantId);
+            fetchOwnerPhotos(stableRestaurantId);
+
+        } catch (err) {
+            console.error("사진 업로드 프로세스 에러:", err);
+            alert("사진 업로드 중 문제가 발생했습니다.");
+        }
+    };
+
     const handleReviewSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -354,6 +324,60 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
         setTimeout(() => { onClose(); }, 300);
     };
 
+    useEffect(() => {
+        if (restaurant) {
+            cachedRestaurantRef.current = restaurant;
+
+            const rawId = restaurant.restaurant_id;
+            const parsed = Number(rawId);
+
+            if (!isNaN(rawId) && rawId > 0) {
+                setStableRestaurantId(rawId);
+                console.log("🎯 [잠금 성공] 백엔드 명세와 동기화 완료 ID ➔", parsed);
+
+                fetchRestaurantMenus(rawId);
+                fetchRestaurantReviews(rawId);
+                fetchOwnerPhotos(rawId);
+                fetchRestaurantDetail(rawId);
+            }
+
+            setShouldRender(true);
+            setIsAnimatingOut(false);
+            setActiveTab('HOME');
+            resetReviewForm();
+        } else if (shouldRender) {
+            setIsAnimatingOut(true);
+            const timer = setTimeout(() => {
+                setShouldRender(false);
+                setIsAnimatingOut(false);
+                cachedRestaurantRef.current = null;
+                setStableRestaurantId(0);
+                setIsFavorited(false);
+                setToastMessage(null);
+                setMenus([]);
+                setReviews([]);
+                setOwnerPhotos([]);
+                setDetailData(null);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [restaurant]);
+
+    // 즐겨찾기 여부 확인
+    useEffect(() => {
+        if (!stableRestaurantId || stableRestaurantId <= 0) return;
+        checkFavorite(stableRestaurantId)
+            .then((res: { isFavorite: boolean }) => setIsFavorited(res.isFavorite))
+            .catch(() => {});
+    }, [stableRestaurantId]);
+
+    // 토스트 자동 소멸
+    useEffect(() => {
+        if (!toastMessage) return;
+        const timer = setTimeout(() => setToastMessage(null), 2500);
+        return () => clearTimeout(timer);
+    }, [toastMessage]);
+
     const currentViewShop = restaurant || cachedRestaurantRef.current;
 
     if (!shouldRender || !currentViewShop) return null;
@@ -379,13 +403,13 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                     <div className="space-y-1 overflow-hidden">
                         <div className="flex items-center space-x-2.5">
                             <h2 className="text-lg font-black text-gray-900 truncate max-w-[280px] md:max-w-[500px]">
-                                {currentViewShop.name}
+                                {detailData?.name || currentViewShop.name}
                             </h2>
                             <span className="text-[10px] bg-green-700 text-white font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex-shrink-0">
-                                {currentViewShop.veganType}
+                                {detailData?.veganType || currentViewShop.veganType}
                             </span>
                         </div>
-                        <p className="text-xs text-gray-500 font-semibold truncate">📍 {currentViewShop.address}</p>
+                        <p className="text-xs text-gray-500 font-semibold truncate">📍 {detailData?.address || currentViewShop.address}</p>
                     </div>
                 </div>
 
@@ -450,7 +474,12 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                             {currentViewShop.matchedMenus && currentViewShop.matchedMenus.length > 0 && (
                                 <p>🔍 검색어 매칭 키워드: <span className="text-green-700 font-bold bg-green-50 px-1.5 py-0.5 rounded-md">{currentViewShop.matchedMenus.join(', ')}</span></p>
                             )}
-                            <p>⏰ 영업 시간: 매일 10:00 ~ 21:00 (라스트오더 20:30)</p>
+                            <p>⏰ 영업 시간: {detailData?.businessHours && Object.keys(detailData.businessHours).length > 0
+                                ? (Object.values(detailData.businessHours)[0] as string)
+                                : '매일 10:00 ~ 21:00 (라스트오더 20:30)'}</p>
+                            {detailData?.phone && (
+                                <p>📞 전화번호: {detailData.phone}</p>
+                            )}
                         </div>
                     </div>
                 )}

@@ -187,10 +187,9 @@ export default function SignUpForm({ setViewMode }: SignUpFormProps) {
                     phone: formData.phone,
                     nickname: formData.nickname,
                     password: formData.password,
-                    // 사진 파일은 쌩으로 드래그해 넣을 수 없으므로, 파일 명칭 문자열만 토스하거나
-                    // 비어있을 때는 정석대로 null 처리를 유도하여 백엔드 DTO 바인딩 에러를 파쇄합니다.
                     profileImageUrl: profileFile ? profileFile.name : null,
-                    bio: formData.bio
+                    bio: formData.bio,
+                    role: role
                 })
             });
 

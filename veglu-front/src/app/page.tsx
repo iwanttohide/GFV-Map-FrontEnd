@@ -167,20 +167,35 @@ export default function MainPage() {
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token') || urlParams.get('accessToken');
-        const email = urlParams.get('email');
-        const nickname = urlParams.get('nickname');
-        const profileImageUrl = urlParams.get('profileImageUrl') || urlParams.get('avatar');
-        const bio = urlParams.get('bio');
-        const role = urlParams.get('role');
 
-        if (token && email) {
-            localStorage.setItem('accessToken', token);
-            localStorage.setItem('user_email', email);
-            if (nickname) localStorage.setItem('user_nickname', nickname);
-            if (profileImageUrl) localStorage.setItem('user_avatar', profileImageUrl);
-            if (bio) localStorage.setItem('user_bio', bio);
-            if (role) localStorage.setItem('user_role', role);
+        const processQueryLogin = async (loginToken: string) => {
+            localStorage.setItem('accessToken', loginToken);
+
+            // 🚀 백엔드 /user/me API를 통해 실제 유저 메타데이터 징집
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${loginToken}`
+                    }
+                });
+                if (response.ok) {
+                    const userData = await response.json();
+                    if (userData.email) localStorage.setItem('user_email', userData.email);
+                    if (userData.nickname) localStorage.setItem('user_nickname', userData.nickname);
+                    if (userData.profileImageUrl) localStorage.setItem('user_avatar', userData.profileImageUrl);
+                    if (userData.bio) localStorage.setItem('user_bio', userData.bio);
+                }
+            } catch (err) {
+                console.error("🚨 소셜 로그인 유저 프로필 조회 실패:", err);
+            }
+
             window.location.href = '/';
+        };
+
+        if (token) {
+            processQueryLogin(token);
+            return; // 쿼리 로그인을 처리하면 밑의 checkAuthAndRefresh는 생략하도록 리턴 처리
         }
 
         const checkAuthAndRefresh = async () => {

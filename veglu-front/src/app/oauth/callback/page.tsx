@@ -8,27 +8,19 @@ export default function OAuthCallback() {
     useEffect(() => {
         // 1. 쿼리 스트링(?accessToken=...) 파싱
         const searchParams = new URLSearchParams(window.location.search);
-        let accessToken = searchParams.get('accessToken');
+        let accessToken = searchParams.get('accessToken') || searchParams.get('token');
         let refreshToken = searchParams.get('refreshToken');
-        let email = searchParams.get('email');
-        let nickname = searchParams.get('nickname');
-        let profileImageUrl = searchParams.get('profileImageUrl') || searchParams.get('avatar');
-        let bio = searchParams.get('bio');
         let role = searchParams.get('role');
 
         // 2. 만약 쿼리 스트링에 토큰이 없다면 해시(#accessToken=...) 파싱 (OAuth2 Implicit Grant 대응)
         if (!accessToken && window.location.hash) {
             const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            accessToken = hashParams.get('accessToken');
+            accessToken = hashParams.get('accessToken') || hashParams.get('token');
             refreshToken = hashParams.get('refreshToken');
-            email = hashParams.get('email');
-            nickname = hashParams.get('nickname');
-            profileImageUrl = hashParams.get('profileImageUrl') || hashParams.get('avatar');
-            bio = hashParams.get('bio');
             role = hashParams.get('role');
         }
 
-        if (accessToken) {
+        const handleLoginSuccess = async (token: string) => {
             // LocalStorage에 인증 및 유저 정보 동기화 저장 전, 기존 로그인 잔재 청소
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
@@ -38,26 +30,43 @@ export default function OAuthCallback() {
             localStorage.removeItem('user_role');
             localStorage.removeItem('user_bio');
 
-            localStorage.setItem('accessToken', accessToken);
+            // 토큰 및 기본 권한 정보 저장
+            localStorage.setItem('accessToken', token);
             if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-            if (email) localStorage.setItem('user_email', email);
-            if (nickname) localStorage.setItem('user_nickname', nickname);
-            if (profileImageUrl) localStorage.setItem('user_avatar', profileImageUrl);
             if (role) localStorage.setItem('user_role', role);
-            if (bio) localStorage.setItem('user_bio', bio);
 
-            setTimeout(() => {
-                setStatusText('🎉 인증 성공! 비건 안심 지도로 진입합니다.');
-            }, 0);
+            // 🚀 백엔드 /user/me API를 통해 실제 유저 메타데이터(이메일, 닉네임, 프로필, bio) 징집 가동
+            try {
+                const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+                const response = await fetch(`${BACKEND_URL}/user/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const userData = await response.json();
+                    if (userData.email) localStorage.setItem('user_email', userData.email);
+                    if (userData.nickname) localStorage.setItem('user_nickname', userData.nickname);
+                    if (userData.profileImageUrl) localStorage.setItem('user_avatar', userData.profileImageUrl);
+                    if (userData.bio) localStorage.setItem('user_bio', userData.bio);
+                }
+            } catch (err) {
+                console.error('🚨 소셜 로그인 유저 프로필 조회 실패:', err);
+            }
+
+            setStatusText('🎉 인증 성공! 비건 안심 지도로 진입합니다.');
 
             // React/Next.js의 Auth Provider 및 레이아웃 상태 갱신을 위해 window.location.href로 강제 새로고침 리다이렉트
             setTimeout(() => {
                 window.location.href = '/';
             }, 500);
+        };
+
+        if (accessToken) {
+            handleLoginSuccess(accessToken);
         } else {
-            setTimeout(() => {
-                setStatusText('⚠️ 인증 토큰을 찾을 수 없습니다. 로그인 페이지로 돌아갑니다.');
-            }, 0);
+            setStatusText('⚠️ 인증 토큰을 찾을 수 없습니다. 로그인 페이지로 돌아갑니다.');
             setTimeout(() => {
                 window.location.href = '/login';
             }, 1500);

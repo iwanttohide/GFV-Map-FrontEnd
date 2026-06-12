@@ -41,6 +41,7 @@ interface ReviewItem {
     createdAt?: string;
     updatedAt?: string;
     userId?: number;
+    reply?: string;
 }
 
 interface RestaurantDetailSheetProps {
@@ -217,13 +218,33 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             });
             if (response.ok) {
                 const data = await response.json();
-                if (data && data.content && Array.isArray(data.content)) {
-                    setReviews(data.content);
-                } else if (Array.isArray(data)) {
-                    setReviews(data);
-                } else {
-                    setReviews([]);
-                }
+                const rawReviews = (data && data.content && Array.isArray(data.content))
+                    ? data.content
+                    : (Array.isArray(data) ? data : []);
+
+                const reviewsWithReplies = await Promise.all(
+                    rawReviews.map(async (rev: ReviewItem) => {
+                        try {
+                            if (rev.reviewId) {
+                                const replyRes = await fetch(`${BACKEND_URL}/review-reply/review/${rev.reviewId}`, {
+                                    method: 'GET',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': accessToken ? `Bearer ${accessToken}` : ''
+                                    }
+                                });
+                                if (replyRes.ok) {
+                                    const replyData = await replyRes.json();
+                                    return { ...rev, reply: replyData.content };
+                                }
+                            }
+                        } catch (e) {
+                            console.error(`리뷰 ID ${rev.reviewId}의 답글 스캔 실패:`, e);
+                        }
+                        return rev;
+                    })
+                );
+                setReviews(reviewsWithReplies);
             }
         } catch (err) {
             console.error("리뷰 피드 조회 실패:", err);
@@ -545,6 +566,12 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                                             {rev.photos.map((pUrl, pIdx) => (
                                                 <img key={pIdx} src={pUrl} alt="review-attach" className="w-14 h-14 rounded-lg object-cover border border-gray-200 bg-gray-50 flex-shrink-0" />
                                             ))}
+                                        </div>
+                                    )}
+                                    {rev.reply && (
+                                        <div className="mt-2.5 p-3 bg-gray-50 border border-gray-150 rounded-xl space-y-1">
+                                            <p className="text-[10px] text-green-700 font-extrabold">📢 점주님 답글</p>
+                                            <p className="text-xs text-gray-600 font-medium whitespace-pre-line leading-relaxed">{rev.reply}</p>
                                         </div>
                                     )}
                                 </div>

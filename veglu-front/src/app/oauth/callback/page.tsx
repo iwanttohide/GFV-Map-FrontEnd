@@ -13,6 +13,7 @@ export default function OAuthCallback() {
         let email = searchParams.get('email');
         let nickname = searchParams.get('nickname');
         let profileImageUrl = searchParams.get('profileImageUrl') || searchParams.get('avatar');
+        let bio = searchParams.get('bio');
         let role = searchParams.get('role');
 
         // 2. 만약 쿼리 스트링에 토큰이 없다면 해시(#accessToken=...) 파싱 (OAuth2 Implicit Grant 대응)
@@ -23,6 +24,7 @@ export default function OAuthCallback() {
             email = hashParams.get('email');
             nickname = hashParams.get('nickname');
             profileImageUrl = hashParams.get('profileImageUrl') || hashParams.get('avatar');
+            bio = hashParams.get('bio');
             role = hashParams.get('role');
         }
 
@@ -34,6 +36,7 @@ export default function OAuthCallback() {
             localStorage.removeItem('user_nickname');
             localStorage.removeItem('user_avatar');
             localStorage.removeItem('user_role');
+            localStorage.removeItem('user_bio');
 
             localStorage.setItem('accessToken', accessToken);
             if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
@@ -41,6 +44,7 @@ export default function OAuthCallback() {
             if (nickname) localStorage.setItem('user_nickname', nickname);
             if (profileImageUrl) localStorage.setItem('user_avatar', profileImageUrl);
             if (role) localStorage.setItem('user_role', role);
+            if (bio) localStorage.setItem('user_bio', bio);
 
             setTimeout(() => {
                 setStatusText('🎉 인증 성공! 비건 안심 지도로 진입합니다.');

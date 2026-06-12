@@ -166,12 +166,20 @@ export default function MainPage() {
     // 새로고침 시 자동 토큰 검증 및 재발급
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
+        const token = urlParams.get('token') || urlParams.get('accessToken');
         const email = urlParams.get('email');
+        const nickname = urlParams.get('nickname');
+        const profileImageUrl = urlParams.get('profileImageUrl') || urlParams.get('avatar');
+        const bio = urlParams.get('bio');
+        const role = urlParams.get('role');
 
         if (token && email) {
             localStorage.setItem('accessToken', token);
             localStorage.setItem('user_email', email);
+            if (nickname) localStorage.setItem('user_nickname', nickname);
+            if (profileImageUrl) localStorage.setItem('user_avatar', profileImageUrl);
+            if (bio) localStorage.setItem('user_bio', bio);
+            if (role) localStorage.setItem('user_role', role);
             window.location.href = '/';
         }
 
@@ -234,6 +242,11 @@ export default function MainPage() {
         if (confirm('로그아웃 하시겠습니까?')) {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user_email');
+            localStorage.removeItem('user_nickname');
+            localStorage.removeItem('user_avatar');
+            localStorage.removeItem('user_role');
+            localStorage.removeItem('user_bio');
             setIsLoggedIn(false);
             setRestaurants([]);
             setAllRestaurants([]);

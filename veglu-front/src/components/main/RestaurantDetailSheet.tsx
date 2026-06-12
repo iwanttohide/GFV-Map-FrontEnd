@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { toggleFavorite, checkFavorite } from '@/libs/api/favorite';
-import { createPhoto } from '@/libs/api/photo';
+import { createPhoto, getPhotos } from '@/libs/api/photo';
 
 interface Restaurant {
     restaurant_id: number;
@@ -70,6 +70,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
 
     const [reviews, setReviews] = useState<ReviewItem[]>([]);
     const [isReviewLoading, setIsReviewLoading] = useState(false);
+    const [ownerPhotos, setOwnerPhotos] = useState<string[]>([]);
 
     const [writeRating, setWriteRating] = useState<number>(5.0);
     const [writeContent, setWriteContent] = useState<string>('');
@@ -94,6 +95,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
 
                 fetchRestaurantMenus(rawId);
                 fetchRestaurantReviews(rawId);
+                fetchOwnerPhotos(rawId);
             }
 
             setShouldRender(true);
@@ -111,6 +113,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
                 setToastMessage(null);
                 setMenus([]);
                 setReviews([]);
+                setOwnerPhotos([]);
             }, 300);
             return () => clearTimeout(timer);
         }
@@ -167,6 +170,7 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
 
             setToastMessage("📸 사진이 안전하게 등록되었습니다!");
             fetchRestaurantReviews(stableRestaurantId);
+            fetchOwnerPhotos(stableRestaurantId);
 
         } catch (err) {
             console.error("사진 업로드 프로세스 에러:", err);
@@ -250,6 +254,20 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
             console.error("리뷰 피드 조회 실패:", err);
         } finally {
             setIsReviewLoading(false);
+        }
+    };
+
+    const fetchOwnerPhotos = async (id: number) => {
+        try {
+            const data = await getPhotos(id);
+            if (Array.isArray(data)) {
+                const urls = data
+                    .map((p: { url: string }) => p.url)
+                    .filter((url) => url && url.trim() !== '');
+                setOwnerPhotos(urls);
+            }
+        } catch (err) {
+            console.error("점주 사진 조회 실패:", err);
         }
     };
 
@@ -340,9 +358,12 @@ export default function RestaurantDetailSheet({ restaurant, onClose, isSidebarOp
 
     if (!shouldRender || !currentViewShop) return null;
 
-    const allGalleryPhotos = reviews
-        .flatMap((rev) => rev.photos || [])
-        .filter((url) => url && url.trim() !== '');
+    const allGalleryPhotos = [
+        ...ownerPhotos,
+        ...reviews
+            .flatMap((rev) => rev.photos || [])
+            .filter((url) => url && url.trim() !== '')
+    ];
 
     return (
         <div
